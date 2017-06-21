@@ -43,8 +43,7 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 	int currentFrame;
 
 	boolean isHyper;
-	protected int oldSlice;
-
+	
 	GLCMTextureMenu texturemenu;
 	int windowSize;
 	int histogramBins;
@@ -73,7 +72,6 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 		_Slice=imp.getNSlices();
 		_W=imp.getWidth();
 		_H=imp.getHeight();
-
 		histoMaxValue = Double.MIN_VALUE;
 		histoMinValue = Double.MAX_VALUE;
 		
@@ -102,6 +100,9 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 	}
 
 	public void processResult(){
+		boolean valueBoxCheck = texturemenu.create_value.getState();
+		boolean mapBoxCheck = texturemenu.create_map.getState();
+		boolean selectionBoxCheck = texturemenu.roilonlycheck.getState();
 		
 		Checkbox windowSizeCheckBox = texturemenu.windowSizeCheck.getSelectedCheckbox();
 		Checkbox binsCheckBox = texturemenu.histogramBinsCheck.getSelectedCheckbox();
@@ -153,7 +154,7 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 			return;
 		}
 
-		if(texturemenu.create_map.getState()==false && texturemenu.create_value.getState()==false ){
+		if(valueBoxCheck==false && mapBoxCheck==false ){
 			IJ.showMessage("You must select at least one of Map or Value..."); 
 			return;
 		}
@@ -200,7 +201,7 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 			}
 		}
 		
-		if(histogramType==2){//auto In ROI. get Min/Max
+		if(histogramType==2 && selectionBoxCheck == true){//auto In ROI. get Min/Max
 			IJ.showStatus("ROI Calculation...");
 
 			Roi roi = imp.getRoi();
@@ -213,23 +214,33 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 		int totalPixelRoi = 1;
 		if(histogramType==3){//Mean-Std
 			IJ.showStatus("ROI Calculation...");
-			
-			Roi roi = imp.getRoi();
-			if (roi!=null && !roi.isArea()) return;
-			ImageProcessor ip = imp.getProcessor();
-			ImageProcessor mask = roi!=null?roi.getMask():null;
-			Rectangle r = roi!=null?roi.getBounds():new Rectangle(0,0,ip.getWidth(),ip.getHeight());
-			int totalCurrentRoiPixelCount = imp.getStatistics().pixelCount;
-			double simean = imp.getStatistics().mean;
-			double sistd =  imp.getStatistics().stdDev;
 			int currentRoiPixelCount = 0;
-			for(int indexH=0;indexH<_H;indexH++){
-				for(int indexW=0;indexW<_W;indexW++){
-					int x=indexW;
-					int y=indexH;
-					if (x>=r.x && y>=r.y && x<=r.x+r.width && y<=r.y+r.height&& (mask==null||mask.getPixel(x-r.x,y-r.y)!=0) ) {
-						if(roi==null)continue;
-						if(mask==null && x == r.x+r.width || y == r.y+r.height)continue; // rectangle ROI
+			if(selectionBoxCheck){
+				Roi roi = imp.getRoi();
+				if (roi!=null && !roi.isArea()) return;
+				ImageProcessor ip = imp.getProcessor();
+				ImageProcessor mask = roi!=null?roi.getMask():null;
+				Rectangle r = roi!=null?roi.getBounds():new Rectangle(0,0,ip.getWidth(),ip.getHeight());
+				int totalCurrentRoiPixelCount = imp.getStatistics().pixelCount;
+				for(int indexH=0;indexH<_H;indexH++){
+					for(int indexW=0;indexW<_W;indexW++){
+						int x=indexW;
+						int y=indexH;
+						if (x>=r.x && y>=r.y && x<=r.x+r.width && y<=r.y+r.height&& (mask==null||mask.getPixel(x-r.x,y-r.y)!=0) ) {
+							if(roi==null)continue;
+							if(mask==null && x == r.x+r.width || y == r.y+r.height)continue; // rectangle ROI
+							currentRoiPixelCount++;
+							SI_sum += img2DArray[indexW][indexH];
+							SI_sum2 += Math.pow(img2DArray[indexW][indexH], 2);
+						}
+					}
+				}
+			}else{
+				int totalCurrentRoiPixelCount = imp.getStatistics().pixelCount;
+				for(int indexH=0;indexH<_H;indexH++){
+					for(int indexW=0;indexW<_W;indexW++){
+						int x=indexW;
+						int y=indexH;
 						currentRoiPixelCount++;
 						SI_sum += img2DArray[indexW][indexH];
 						SI_sum2 += Math.pow(img2DArray[indexW][indexH], 2);
@@ -357,217 +368,623 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 			double GLCM_SUMA_ave = 0.0, GLCM_SUMV_ave = 0.0, GLCM_SUME_ave = 0.0;
 			double GLCM_DIFA_ave = 0.0, GLCM_DIFV_ave = 0.0, GLCM_DIFE_ave = 0.0;						
 			double GLCM_IMC1_ave = 0.0, GLCM_IMC2_ave = 0.0;
+			
+			float GLCM_ASM_0_Array[] = null, GLCM_CON_0_Array[] = null, GLCM_ENT_0_Array[] = null, GLCM_MEAN_0_Array[] = null, GLCM_VAR_0_Array[] = null;
+			float GLCM_ACO_0_Array[] = null, GLCM_CLP_0_Array[] = null, GLCM_CLS_0_Array[] = null, GLCM_CLT_0_Array[] = null, GLCM_DIS_0_Array[] = null;
+			float GLCM_HOM_0_Array[] = null, GLCM_IDM_0_Array[] = null, GLCM_IDMN_0_Array[] = null, GLCM_IDN_0_Array[] = null;
+			float GLCM_CORR_0_Array[] = null, GLCM_IVAR_0_Array[] = null, GLCM_MAXP_0_Array[] = null;						
+			float GLCM_SUMA_0_Array[] = null, GLCM_SUMV_0_Array[] = null, GLCM_SUME_0_Array[] = null;
+			float GLCM_DIFA_0_Array[] = null, GLCM_DIFV_0_Array[] = null, GLCM_DIFE_0_Array[] = null;						
+			float GLCM_IMC1_0_Array[] = null, GLCM_IMC2_0_Array[] = null;
+
+			float GLCM_ASM_45_Array[] = null, GLCM_CON_45_Array[] = null, GLCM_ENT_45_Array[] = null, GLCM_MEAN_45_Array[] = null, GLCM_VAR_45_Array[] = null;
+			float GLCM_ACO_45_Array[] = null, GLCM_CLP_45_Array[] = null, GLCM_CLS_45_Array[] = null, GLCM_CLT_45_Array[] = null, GLCM_DIS_45_Array[] = null;
+			float GLCM_HOM_45_Array[] = null, GLCM_IDM_45_Array[] = null, GLCM_IDMN_45_Array[] = null, GLCM_IDN_45_Array[] = null;
+			float GLCM_CORR_45_Array[] = null, GLCM_IVAR_45_Array[] = null, GLCM_MAXP_45_Array[] = null;						
+			float GLCM_SUMA_45_Array[] = null, GLCM_SUMV_45_Array[] = null, GLCM_SUME_45_Array[] = null;
+			float GLCM_DIFA_45_Array[] = null, GLCM_DIFV_45_Array[] = null, GLCM_DIFE_45_Array[] = null;						
+			float GLCM_IMC1_45_Array[] = null, GLCM_IMC2_45_Array[] = null;
+
+			float GLCM_ASM_90_Array[] = null, GLCM_CON_90_Array[] = null, GLCM_ENT_90_Array[] = null, GLCM_MEAN_90_Array[] = null, GLCM_VAR_90_Array[] = null;
+			float GLCM_ACO_90_Array[] = null, GLCM_CLP_90_Array[] = null, GLCM_CLS_90_Array[] = null, GLCM_CLT_90_Array[] = null, GLCM_DIS_90_Array[] = null;
+			float GLCM_HOM_90_Array[] = null, GLCM_IDM_90_Array[] = null, GLCM_IDMN_90_Array[] = null, GLCM_IDN_90_Array[] = null;
+			float GLCM_CORR_90_Array[] = null, GLCM_IVAR_90_Array[] = null, GLCM_MAXP_90_Array[] = null;						
+			float GLCM_SUMA_90_Array[] = null, GLCM_SUMV_90_Array[] = null, GLCM_SUME_90_Array[] = null;
+			float GLCM_DIFA_90_Array[] = null, GLCM_DIFV_90_Array[] = null, GLCM_DIFE_90_Array[] = null;						
+			float GLCM_IMC1_90_Array[] = null, GLCM_IMC2_90_Array[] = null;
+
+			float GLCM_ASM_135_Array[] = null, GLCM_CON_135_Array[] = null, GLCM_ENT_135_Array[] = null, GLCM_MEAN_135_Array[] = null, GLCM_VAR_135_Array[] = null;
+			float GLCM_ACO_135_Array[] = null, GLCM_CLP_135_Array[] = null, GLCM_CLS_135_Array[] = null, GLCM_CLT_135_Array[] = null, GLCM_DIS_135_Array[] = null;
+			float GLCM_HOM_135_Array[] = null, GLCM_IDM_135_Array[] = null, GLCM_IDMN_135_Array[] = null, GLCM_IDN_135_Array[] = null;
+			float GLCM_CORR_135_Array[] = null, GLCM_IVAR_135_Array[] = null, GLCM_MAXP_135_Array[] = null;						
+			float GLCM_SUMA_135_Array[] = null, GLCM_SUMV_135_Array[] = null, GLCM_SUME_135_Array[] = null;
+			float GLCM_DIFA_135_Array[] = null, GLCM_DIFV_135_Array[] = null, GLCM_DIFE_135_Array[] = null;						
+			float GLCM_IMC1_135_Array[] = null, GLCM_IMC2_135_Array[] = null;
+
+			float GLCM_ASM_ave_Array[] = null, GLCM_CON_ave_Array[] = null, GLCM_ENT_ave_Array[] = null, GLCM_MEAN_ave_Array[] = null, GLCM_VAR_ave_Array[] = null;
+			float GLCM_ACO_ave_Array[] = null, GLCM_CLP_ave_Array[] = null, GLCM_CLS_ave_Array[] = null, GLCM_CLT_ave_Array[] = null, GLCM_DIS_ave_Array[] = null;
+			float GLCM_HOM_ave_Array[] = null, GLCM_IDM_ave_Array[] = null, GLCM_IDMN_ave_Array[] = null, GLCM_IDN_ave_Array[] = null;
+			float GLCM_CORR_ave_Array[] = null, GLCM_IVAR_ave_Array[] = null, GLCM_MAXP_ave_Array[] = null;						
+			float GLCM_SUMA_ave_Array[] = null, GLCM_SUMV_ave_Array[] = null, GLCM_SUME_ave_Array[] = null;
+			float GLCM_DIFA_ave_Array[] = null, GLCM_DIFV_ave_Array[] = null, GLCM_DIFE_ave_Array[] = null;						
+			float GLCM_IMC1_ave_Array[] = null, GLCM_IMC2_ave_Array[] = null;
+			
+			if(texturemenu.create_map.getState()==true){
+				if(texturemenu.direction_0.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						GLCM_ASM_0_Array = new float[_W*_H]; 
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						GLCM_CON_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						GLCM_ENT_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						GLCM_MEAN_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						GLCM_VAR_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						GLCM_ACO_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						GLCM_CLP_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						GLCM_CLS_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						GLCM_CLT_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						GLCM_DIS_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						GLCM_HOM_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						GLCM_IDM_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						GLCM_IDMN_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						GLCM_IDN_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						GLCM_CORR_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						GLCM_IVAR_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						GLCM_MAXP_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						GLCM_SUMA_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						GLCM_SUMV_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						GLCM_SUME_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						GLCM_DIFV_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						GLCM_DIFE_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						GLCM_IMC1_0_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						GLCM_IMC2_0_Array = new float[_W*_H];  
+					}
+				}
+				
+				if(texturemenu.direction_45.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						GLCM_ASM_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						GLCM_CON_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						GLCM_ENT_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						GLCM_MEAN_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						GLCM_VAR_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						GLCM_ACO_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						GLCM_CLP_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						GLCM_CLS_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						GLCM_CLT_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						GLCM_DIS_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						GLCM_HOM_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						GLCM_IDM_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						GLCM_IDMN_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						GLCM_IDN_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						GLCM_CORR_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						GLCM_IVAR_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						GLCM_MAXP_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						GLCM_SUMA_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						GLCM_SUMV_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						GLCM_SUME_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						GLCM_DIFV_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						GLCM_DIFE_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						GLCM_IMC1_45_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						GLCM_IMC2_45_Array = new float[_W*_H];  
+					}
+				}
+				
+				if(texturemenu.direction_90.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						GLCM_ASM_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						GLCM_CON_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						GLCM_ENT_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						GLCM_MEAN_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						GLCM_VAR_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						GLCM_ACO_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						GLCM_CLP_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						GLCM_CLS_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						GLCM_CLT_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						GLCM_DIS_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						GLCM_HOM_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						GLCM_IDM_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						GLCM_IDMN_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						GLCM_IDN_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						GLCM_CORR_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						GLCM_IVAR_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						GLCM_MAXP_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						GLCM_SUMA_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						GLCM_SUMV_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						GLCM_SUME_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						GLCM_DIFV_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						GLCM_DIFE_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						GLCM_IMC1_90_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						GLCM_IMC2_90_Array = new float[_W*_H];  
+					}
+				}
+				
+				if(texturemenu.direction_135.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						GLCM_ASM_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						GLCM_CON_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						GLCM_ENT_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						GLCM_MEAN_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						GLCM_VAR_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						GLCM_ACO_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						GLCM_CLP_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						GLCM_CLS_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						GLCM_CLT_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						GLCM_DIS_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						GLCM_HOM_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						GLCM_IDM_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						GLCM_IDMN_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						GLCM_IDN_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						GLCM_CORR_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						GLCM_IVAR_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						GLCM_MAXP_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						GLCM_SUMA_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						GLCM_SUMV_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						GLCM_SUME_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						GLCM_DIFV_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						GLCM_DIFE_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						GLCM_IMC1_135_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						GLCM_IMC2_135_Array = new float[_W*_H];  
+					}
+				}
+				
+				if(texturemenu.direction_average.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						GLCM_ASM_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						GLCM_CON_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						GLCM_ENT_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						GLCM_MEAN_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						GLCM_VAR_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						GLCM_ACO_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						GLCM_CLP_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						GLCM_CLS_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						GLCM_CLT_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						GLCM_DIS_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						GLCM_HOM_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						GLCM_IDM_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						GLCM_IDMN_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						GLCM_IDN_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						GLCM_CORR_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						GLCM_IVAR_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						GLCM_MAXP_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						GLCM_SUMA_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						GLCM_SUMV_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						GLCM_SUME_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						GLCM_DIFV_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						GLCM_DIFE_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						GLCM_IMC1_ave_Array = new float[_W*_H];  
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						GLCM_IMC2_ave_Array = new float[_W*_H];  
+					}
+				}
+
+			}
 
 			int roiPixelCount = 0;
 
-			int sliceStart,sliceEnd;
-			sliceStart=imp.getZ()-1;
-			sliceEnd=imp.getZ();
-			
 			double[][] GLCM_mat;
 			int limitSize = (windowSize-1)/2;
 
-			oldSlice = imp.getZ();
 			int currentSlice=imp.getZ(); 
-			int stackSize = imp.getImageStackSize();
+			
+			Roi roi = null;
+			if(selectionBoxCheck){
+				roi = imp.getRoi();
+			}
+			if (roi!=null && !roi.isArea()) roi = null;
+			ImageProcessor ip = imp.getProcessor();
+			ImageProcessor mask = roi!=null?roi.getMask():null;
+			Rectangle r = roi!=null?roi.getBounds():new Rectangle(0,0,ip.getWidth(),ip.getHeight());
+			int totalCurrentRoiPixelCount = imp.getStatistics().pixelCount;
+			int currentRoiPixelCount = 0;
+			for(int indexH=limitSize;indexH<_H-limitSize;indexH++){
+				IJ.showStatus("Slice: "+currentSlice+"/"+_Slice+" ... "+String.format("%.2f", ((double)(currentRoiPixelCount)/(totalCurrentRoiPixelCount)*100))+"%");
+				for(int indexW=limitSize;indexW<_W-limitSize;indexW++){
+					int x=indexW;
+					int y=indexH;
+					double GLCM_ASM_ave_pixel = 0, GLCM_CON_ave_pixel = 0, GLCM_ENT_ave_pixel = 0, GLCM_MEAN_ave_pixel = 0, GLCM_VAR_ave_pixel = 0;
+					double GLCM_ACO_ave_pixel = 0, GLCM_CLP_ave_pixel = 0, GLCM_CLS_ave_pixel = 0, GLCM_CLT_ave_pixel = 0, GLCM_DIS_ave_pixel = 0;
+					double GLCM_HOM_ave_pixel = 0, GLCM_IDM_ave_pixel = 0, GLCM_IDMN_ave_pixel = 0, GLCM_IDN_ave_pixel = 0;
+					double GLCM_CORR_ave_pixel = 0, GLCM_IVAR_ave_pixel = 0, GLCM_MAXP_ave_pixel = 0;						
+					double GLCM_SUMA_ave_pixel = 0, GLCM_SUMV_ave_pixel = 0, GLCM_SUME_ave_pixel = 0;
+					double GLCM_DIFA_ave_pixel = 0, GLCM_DIFV_ave_pixel = 0, GLCM_DIFE_ave_pixel = 0;						
+					double GLCM_IMC1_ave_pixel = 0, GLCM_IMC2_ave_pixel = 0;
+					
+					
+					if (x>=r.x && y>=r.y && x<=r.x+r.width && y<=r.y+r.height&& (mask==null||mask.getPixel(x-r.x,y-r.y)!=0) ) {
+//						if(x == r.x+r.width || y == r.y+r.height)continue; // rectangle ROI
+						roiPixelCount++;
+						currentRoiPixelCount++;
+						GLCM_mat = new double[histogramBins][histogramBins];
+						//0¡Æ
+						if(texturemenu.direction_0.getState()==true || texturemenu.direction_average.getState()==true){
+							for(int kernel_h=-limitSize;kernel_h<=limitSize;kernel_h++){
+								for(int kernel_w=-limitSize;kernel_w<limitSize;kernel_w++){
+									int referecePixel = (int)img2DArray[indexW+kernel_w][indexH+kernel_h];
+									int neighborPixel = (int)img2DArray[indexW+kernel_w+1][indexH+kernel_h];
+									GLCM_mat[referecePixel][neighborPixel] = GLCM_mat[referecePixel][neighborPixel]+1; 
+									GLCM_mat[neighborPixel][referecePixel] = GLCM_mat[neighborPixel][referecePixel]+1; //symetry mtx
+								}
+							}
+							for(int h=0;h<histogramBins;h++){ // normalization
+								for(int w=0;w<histogramBins;w++){
+									GLCM_mat[w][h] = GLCM_mat[w][h]/ (windowSize*(windowSize-1)*2);
+								}
+							}
 
-//			for(int indexS=sliceStart;indexS<sliceEnd;indexS++){
-//				if(roiLoad==true && userInput[indexS]==false)
-//					continue;
-//				if (imp.isHyperStack()){
-//					imp.setZ(indexS+1);
-//				}else{	
-//					imp.setSlice(indexS+1);
-//				}
-//				try {
-//					Thread.sleep(30);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//				currentSlice = indexS+1;
-//				IJ.showStatus("Slice: "+currentSlice+"/"+_Slice);
-				Roi roi = imp.getRoi();
-				if (roi!=null && !roi.isArea()) roi = null;
-				if(roi==null)return;
-				ImageProcessor ip = imp.getProcessor();
-				ImageProcessor mask = roi!=null?roi.getMask():null;
-				Rectangle r = roi!=null?roi.getBounds():new Rectangle(0,0,ip.getWidth(),ip.getHeight());
-				int totalCurrentRoiPixelCount = imp.getStatistics().pixelCount;
-				int currentRoiPixelCount = 0;
-				for(int indexH=limitSize;indexH<_H-limitSize;indexH++){
-					IJ.showStatus("Slice: "+currentSlice+"/"+_Slice+" ... "+String.format("%.2f", ((double)(currentRoiPixelCount)/(totalCurrentRoiPixelCount)*100))+"%");
-					for(int indexW=limitSize;indexW<_W-limitSize;indexW++){
-						int x=indexW;
-						int y=indexH;
+							double P_ij = 0;
+							double GLCM_ASM = 0.0, GLCM_CON = 0.0, GLCM_ENT = 0.0, GLCM_MEAN = 0.0, GLCM_VAR = 0.0;
+							double GLCM_ACO = 0.0, GLCM_CLP = 0.0, GLCM_CLS = 0.0, GLCM_CLT = 0.0, GLCM_DIS = 0.0;
+							double GLCM_HOM = 0.0, GLCM_IDM = 0.0, GLCM_IDMN = 0.0, GLCM_IDN = 0.0;
+							double GLCM_CORR = 0.0, GLCM_IVAR = 0.0, GLCM_MAXP = 0.0;						
+							double GLCM_SUMA = 0.0, GLCM_SUMV = 0.0, GLCM_SUME = 0.0;
+							double GLCM_DIFA = 0.0, GLCM_DIFV = 0.0, GLCM_DIFE = 0.0;						
+							double GLCM_IMC1 = 0.0, GLCM_IMC2 = 0.0;
 
-						if (x>=r.x && y>=r.y && x<=r.x+r.width && y<=r.y+r.height&& (mask==null||mask.getPixel(x-r.x,y-r.y)!=0) ) {
-							if(roi==null)continue;
-							if(mask==null && x == r.x+r.width || y == r.y+r.height)continue; // rectangle ROI
-							roiPixelCount++;
-							currentRoiPixelCount++;
-							GLCM_mat = new double[histogramBins][histogramBins];
-							//0¡Æ
-							if(texturemenu.direction_0.getState()==true || texturemenu.direction_average.getState()==true){
-								for(int kernel_h=-limitSize;kernel_h<=limitSize;kernel_h++){
-									for(int kernel_w=-limitSize;kernel_w<limitSize;kernel_w++){
-										int referecePixel = (int)img2DArray[indexW+kernel_w][indexH+kernel_h];
-										int neighborPixel = (int)img2DArray[indexW+kernel_w+1][indexH+kernel_h];
-										GLCM_mat[referecePixel][neighborPixel] = GLCM_mat[referecePixel][neighborPixel]+1; 
-										GLCM_mat[neighborPixel][referecePixel] = GLCM_mat[neighborPixel][referecePixel]+1; //symetry mtx
+							// 3) calculate marginal, diff, sum matrix
+							// 3-1) for marginal, GLCM is symetry mtx. Px is same with Py. Ux=Uy=U(GLCM_MEAN).						
+							double[] Px = new double[histogramBins];
+							Arrays.fill(Px, 0.0);
+							double[] diff_i = new double[histogramBins];
+							Arrays.fill(diff_i, 0.0);
+							double[] sum_i = new double[2*histogramBins-1];
+							Arrays.fill(sum_i, 0.0);
+							int diff, sum;
+							for (int i = 0; i < histogramBins; i ++){
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = GLCM_mat[i][j];
+									if(P_ij==0)continue;
+									diff = Math.abs(i-j);
+									sum = i+j;
+
+									diff_i[diff] +=P_ij;
+									sum_i[sum] +=P_ij;
+									Px[i] += P_ij;
+
+									GLCM_MEAN += i * P_ij;
+								}
+							}
+
+							for (int i = 0; i < histogramBins; i ++){
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = GLCM_mat[i][j];
+									if(P_ij==0)continue;
+									// 1) Angular secon moment or Energy
+									GLCM_ASM += Math.pow(P_ij, 2);
+
+									// 2) Contrast
+									GLCM_CON += P_ij * Math.pow(i-j, 2);
+
+									// 3) Entropy 
+									if (P_ij != 0){
+										GLCM_ENT += P_ij * (-1 * Math.log(P_ij)/Math.log(2));
+									}
+
+									// 4) Mean is already calculated. 
+									// 5) Variance 
+									GLCM_VAR += P_ij * Math.pow(i - GLCM_MEAN, 2);
+
+									// 6) Autocorrelation1
+									GLCM_ACO += P_ij * i * j;
+
+									// 7) Cluster Prominence
+									GLCM_CLP += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 4); 
+
+									// 8) Cluster Shade
+									GLCM_CLS += P_ij * Math.pow(i + j - GLCM_MEAN -GLCM_MEAN, 3);
+
+									// 9) Cluster Tendency
+									GLCM_CLT += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 2);
+
+									// 10) Dissimilarity
+									GLCM_DIS += P_ij * Math.abs(i-j);
+
+									// 11) Homogeneity 1
+									GLCM_HOM += P_ij / (1 + Math.abs(i-j));
+
+									// 12) Homogeneity 2 or Inverse difference moment(IDM)
+									GLCM_IDM += P_ij / (1 + Math.pow(i-j, 2));
+
+									// 13) Inverse difference moment normalized (IDMN)
+									GLCM_IDMN += P_ij / (1 + (Math.pow(i-j, 2) / Math.pow(histogramBins,2) ) );
+
+									// 14) Inverse difference normalized (IDN)
+									GLCM_IDN += P_ij / (1 + (Math.pow(i-j, 2) / ((double)histogramBins) ) );
+
+									// 15 Correlation
+									GLCM_CORR += P_ij *(i-GLCM_MEAN) * (j-GLCM_MEAN);
+
+									// 16) Inverse Variance
+									if (i != j){
+										GLCM_IVAR += P_ij / Math.pow(i-j, 2);
+									}
+
+									// 17) Maximum Probability
+									if (GLCM_MAXP <= P_ij){
+										GLCM_MAXP = P_ij;
 									}
 								}
-								for(int h=0;h<histogramBins;h++){ // normalization
-									for(int w=0;w<histogramBins;w++){
-										GLCM_mat[w][h] = GLCM_mat[w][h]/ (windowSize*(windowSize-1)*2);
-									}
-								}
-
-								double P_ij = 0;
-								double GLCM_ASM = 0.0, GLCM_CON = 0.0, GLCM_ENT = 0.0, GLCM_MEAN = 0.0, GLCM_VAR = 0.0;
-								double GLCM_ACO = 0.0, GLCM_CLP = 0.0, GLCM_CLS = 0.0, GLCM_CLT = 0.0, GLCM_DIS = 0.0;
-								double GLCM_HOM = 0.0, GLCM_IDM = 0.0, GLCM_IDMN = 0.0, GLCM_IDN = 0.0;
-								double GLCM_CORR = 0.0, GLCM_IVAR = 0.0, GLCM_MAXP = 0.0;						
-								double GLCM_SUMA = 0.0, GLCM_SUMV = 0.0, GLCM_SUME = 0.0;
-								double GLCM_DIFA = 0.0, GLCM_DIFV = 0.0, GLCM_DIFE = 0.0;						
-								double GLCM_IMC1 = 0.0, GLCM_IMC2 = 0.0;
-
-								// 3) calculate marginal, diff, sum matrix
-								// 3-1) for marginal, GLCM is symetry mtx. Px is same with Py. Ux=Uy=U(GLCM_MEAN).						
-								double[] Px = new double[histogramBins];
-								Arrays.fill(Px, 0.0);
-								double[] diff_i = new double[histogramBins];
-								Arrays.fill(diff_i, 0.0);
-								double[] sum_i = new double[2*histogramBins-1];
-								Arrays.fill(sum_i, 0.0);
-								int diff, sum;
-								for (int i = 0; i < histogramBins; i ++){
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = GLCM_mat[i][j];
-										if(P_ij==0)continue;
-										diff = Math.abs(i-j);
-										sum = i+j;
-
-										diff_i[diff] +=P_ij;
-										sum_i[sum] +=P_ij;
-										Px[i] += P_ij;
-
-										GLCM_MEAN += i * P_ij;
-									}
-								}
-
-								for (int i = 0; i < histogramBins; i ++){
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = GLCM_mat[i][j];
-										if(P_ij==0)continue;
-										// 1) Angular secon moment or Energy
-										GLCM_ASM += Math.pow(P_ij, 2);
-
-										// 2) Contrast
-										GLCM_CON += P_ij * Math.pow(i-j, 2);
-
-										// 3) Entropy 
-										if (P_ij != 0){
-											GLCM_ENT += P_ij * (-1 * Math.log(P_ij)/Math.log(2));
-										}
-
-										// 4) Mean is already calculated. 
-										// 5) Variance 
-										GLCM_VAR += P_ij * Math.pow(i - GLCM_MEAN, 2);
-										
-										// 6) Autocorrelation1
-										GLCM_ACO += P_ij * i * j;
-
-										// 7) Cluster Prominence
-										GLCM_CLP += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 4); 
-
-										// 8) Cluster Shade
-										GLCM_CLS += P_ij * Math.pow(i + j - GLCM_MEAN -GLCM_MEAN, 3);
-
-										// 9) Cluster Tendency
-										GLCM_CLT += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 2);
-
-										// 10) Dissimilarity
-										GLCM_DIS += P_ij * Math.abs(i-j);
-
-										// 11) Homogeneity 1
-										GLCM_HOM += P_ij / (1 + Math.abs(i-j));
-
-										// 12) Homogeneity 2 or Inverse difference moment(IDM)
-										GLCM_IDM += P_ij / (1 + Math.pow(i-j, 2));
-
-										// 13) Inverse difference moment normalized (IDMN)
-										GLCM_IDMN += P_ij / (1 + (Math.pow(i-j, 2) / Math.pow(histogramBins,2) ) );
-
-										// 14) Inverse difference normalized (IDN)
-										GLCM_IDN += P_ij / (1 + (Math.pow(i-j, 2) / ((double)histogramBins) ) );
-
-										// 15 Correlation
-										GLCM_CORR += P_ij *(i-GLCM_MEAN) * (j-GLCM_MEAN);
-
-										// 16) Inverse Variance
-										if (i != j){
-											GLCM_IVAR += P_ij / Math.pow(i-j, 2);
-										}
-
-										// 17) Maximum Probability
-										if (GLCM_MAXP <= P_ij){
-											GLCM_MAXP = P_ij;
-										}
-									}
-								}
-								if(GLCM_VAR!=0)
+							}
+							if(GLCM_VAR!=0)
 								GLCM_CORR = GLCM_CORR / GLCM_VAR;
-								
-								// 18 ~ 20)  Sum Average (SUMA), Variance (SUMV), Entropy (SUME)
-								for (int i = 0; i < sum_i.length; i ++){
-									GLCM_SUMA += sum_i[i] * i;
-									if(sum_i[i] != 0){
-										GLCM_SUME -= sum_i[i] * Math.log(sum_i[i])/Math.log(2);
-									}
-								}
-								for (int i = 0; i < sum_i.length; i ++){
-									GLCM_SUMV += Math.pow(i-GLCM_SUMA, 2) * sum_i[i];
-								}
 
-								// 21 ~ 23)  Difference Average (DIFA), Variance (DIFV), Entropy (DIFE)
-								for (int i = 0; i < diff_i.length; i ++){
-									GLCM_DIFA += diff_i[i] * i;
-									if(diff_i[i] != 0){
-										GLCM_DIFE -= diff_i[i] * Math.log(diff_i[i])/Math.log(2);
-									}
+							// 18 ~ 20)  Sum Average (SUMA), Variance (SUMV), Entropy (SUME)
+							for (int i = 0; i < sum_i.length; i ++){
+								GLCM_SUMA += sum_i[i] * i;
+								if(sum_i[i] != 0){
+									GLCM_SUME -= sum_i[i] * Math.log(sum_i[i])/Math.log(2);
 								}
-								for (int i = 0; i < diff_i.length; i ++){
-									GLCM_DIFV += Math.pow(i-GLCM_DIFA, 2) * diff_i[i];
-								}
+							}
+							for (int i = 0; i < sum_i.length; i ++){
+								GLCM_SUMV += Math.pow(i-GLCM_SUMA, 2) * sum_i[i];
+							}
 
-								// looping for HXY matrix..
-								double HX = 0.0, HXY = 0.0, HXY1 = 0.0, HXY2 = 0.0; 
-								for (int i = 0; i < histogramBins; i ++){
-									if(Px[i]!=0){
-										HX -= Px[i] * Math.log(Px[i]);								
-									} 
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = P_ij = GLCM_mat[i][j];
-
-										if(P_ij != 0){
-											HXY -= P_ij * Math.log(P_ij);
-										}
-										if(Px[i]!=0 && Px[j] !=0){
-											HXY1 -= P_ij * Math.log(Px[i]*Px[j]);
-											HXY2 -= Px[i]*Px[j] * Math.log(Px[i]*Px[j]);
-										}				
-									}
+							// 21 ~ 23)  Difference Average (DIFA), Variance (DIFV), Entropy (DIFE)
+							for (int i = 0; i < diff_i.length; i ++){
+								GLCM_DIFA += diff_i[i] * i;
+								if(diff_i[i] != 0){
+									GLCM_DIFE -= diff_i[i] * Math.log(diff_i[i])/Math.log(2);
 								}
-								// 24) Informational measure of correlation 1 (IMC1)
-								if(HX!=0)
+							}
+							for (int i = 0; i < diff_i.length; i ++){
+								GLCM_DIFV += Math.pow(i-GLCM_DIFA, 2) * diff_i[i];
+							}
+
+							// looping for HXY matrix..
+							double HX = 0.0, HXY = 0.0, HXY1 = 0.0, HXY2 = 0.0; 
+							for (int i = 0; i < histogramBins; i ++){
+								if(Px[i]!=0){
+									HX -= Px[i] * Math.log(Px[i]);								
+								} 
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = P_ij = GLCM_mat[i][j];
+
+									if(P_ij != 0){
+										HXY -= P_ij * Math.log(P_ij);
+									}
+									if(Px[i]!=0 && Px[j] !=0){
+										HXY1 -= P_ij * Math.log(Px[i]*Px[j]);
+										HXY2 -= Px[i]*Px[j] * Math.log(Px[i]*Px[j]);
+									}				
+								}
+							}
+							// 24) Informational measure of correlation 1 (IMC1)
+							if(HX!=0)
 								GLCM_IMC1 = (HXY - HXY1) / HX;
 
-								// 25) Informational measure of correlation 1 (IMC1)
-								if(HXY2-HXY>0)
+							// 25) Informational measure of correlation 1 (IMC1)
+							if(HXY2-HXY>0)
 								GLCM_IMC2 = Math.sqrt(1-Math.exp(-2*(HXY2-HXY)));
 
-								if(texturemenu.create_value.getState()==true){
+							if(texturemenu.create_value.getState()==true){
+								if(texturemenu.direction_0.getState()==true){
 									GLCM_ASM_0 += GLCM_ASM; GLCM_CON_0 += GLCM_CON; GLCM_ENT_0 += GLCM_ENT; GLCM_MEAN_0 += GLCM_MEAN; GLCM_VAR_0 += GLCM_VAR;
 									GLCM_ACO_0+= GLCM_ACO; GLCM_CLP_0 += GLCM_CLP; GLCM_CLS_0 += GLCM_CLS; GLCM_CLT_0 += GLCM_CLT; GLCM_DIS_0 += GLCM_DIS;
 									GLCM_HOM_0 += GLCM_HOM; GLCM_IDM_0 += GLCM_IDM; GLCM_IDMN_0 += GLCM_IDMN; GLCM_IDN_0 += GLCM_IDN;
@@ -575,181 +992,264 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 									GLCM_SUMA_0 += GLCM_SUMA; GLCM_SUMV_0 += GLCM_SUMV; GLCM_SUME_0 += GLCM_SUME;
 									GLCM_DIFA_0 += GLCM_DIFA; GLCM_DIFV_0 += GLCM_DIFV; GLCM_DIFE_0 += GLCM_DIFE;						
 									GLCM_IMC1_0 += GLCM_IMC1; GLCM_IMC2_0 += GLCM_IMC2;
-									if(texturemenu.direction_average.getState()==true){
-										GLCM_ASM_ave += GLCM_ASM; GLCM_CON_ave += GLCM_CON; GLCM_ENT_ave += GLCM_ENT; GLCM_MEAN_ave += GLCM_MEAN; GLCM_VAR_ave += GLCM_VAR;
-										GLCM_ACO_ave+= GLCM_ACO; GLCM_CLP_ave += GLCM_CLP; GLCM_CLS_ave += GLCM_CLS; GLCM_CLT_ave += GLCM_CLT; GLCM_DIS_ave += GLCM_DIS;
-										GLCM_HOM_ave += GLCM_HOM; GLCM_IDM_ave += GLCM_IDM; GLCM_IDMN_ave += GLCM_IDMN; GLCM_IDN_ave += GLCM_IDN;
-										GLCM_CORR_ave += GLCM_CORR; GLCM_IVAR_ave += GLCM_IVAR; GLCM_MAXP_ave += GLCM_MAXP;						
-										GLCM_SUMA_ave += GLCM_SUMA; GLCM_SUMV_ave += GLCM_SUMV; GLCM_SUME_ave += GLCM_SUME;
-										GLCM_DIFA_ave += GLCM_DIFA; GLCM_DIFV_ave += GLCM_DIFV; GLCM_DIFE_ave += GLCM_DIFE;						
-										GLCM_IMC1_ave += GLCM_IMC1; GLCM_IMC2_ave += GLCM_IMC2;
+								}
+								if(texturemenu.direction_average.getState()==true){
+									GLCM_ASM_ave += GLCM_ASM; GLCM_CON_ave += GLCM_CON; GLCM_ENT_ave += GLCM_ENT; GLCM_MEAN_ave += GLCM_MEAN; GLCM_VAR_ave += GLCM_VAR;
+									GLCM_ACO_ave+= GLCM_ACO; GLCM_CLP_ave += GLCM_CLP; GLCM_CLS_ave += GLCM_CLS; GLCM_CLT_ave += GLCM_CLT; GLCM_DIS_ave += GLCM_DIS;
+									GLCM_HOM_ave += GLCM_HOM; GLCM_IDM_ave += GLCM_IDM; GLCM_IDMN_ave += GLCM_IDMN; GLCM_IDN_ave += GLCM_IDN;
+									GLCM_CORR_ave += GLCM_CORR; GLCM_IVAR_ave += GLCM_IVAR; GLCM_MAXP_ave += GLCM_MAXP;						
+									GLCM_SUMA_ave += GLCM_SUMA; GLCM_SUMV_ave += GLCM_SUMV; GLCM_SUME_ave += GLCM_SUME;
+									GLCM_DIFA_ave += GLCM_DIFA; GLCM_DIFV_ave += GLCM_DIFV; GLCM_DIFE_ave += GLCM_DIFE;						
+									GLCM_IMC1_ave += GLCM_IMC1; GLCM_IMC2_ave += GLCM_IMC2;
+									GLCM_ASM_ave_pixel += GLCM_ASM; GLCM_CON_ave_pixel += GLCM_CON; GLCM_ENT_ave_pixel += GLCM_ENT; GLCM_MEAN_ave_pixel += GLCM_MEAN; GLCM_VAR_ave_pixel += GLCM_VAR;
+									GLCM_ACO_ave_pixel+= GLCM_ACO; GLCM_CLP_ave_pixel += GLCM_CLP; GLCM_CLS_ave_pixel += GLCM_CLS; GLCM_CLT_ave_pixel += GLCM_CLT; GLCM_DIS_ave_pixel += GLCM_DIS;
+									GLCM_HOM_ave_pixel += GLCM_HOM; GLCM_IDM_ave_pixel += GLCM_IDM; GLCM_IDMN_ave_pixel += GLCM_IDMN; GLCM_IDN_ave_pixel += GLCM_IDN;
+									GLCM_CORR_ave_pixel += GLCM_CORR; GLCM_IVAR_ave_pixel += GLCM_IVAR; GLCM_MAXP_ave_pixel += GLCM_MAXP;						
+									GLCM_SUMA_ave_pixel += GLCM_SUMA; GLCM_SUMV_ave_pixel += GLCM_SUMV; GLCM_SUME_ave_pixel += GLCM_SUME;
+									GLCM_DIFA_ave_pixel += GLCM_DIFA; GLCM_DIFV_ave_pixel += GLCM_DIFV; GLCM_DIFE_ave_pixel += GLCM_DIFE;						
+									GLCM_IMC1_ave_pixel += GLCM_IMC1; GLCM_IMC2_ave_pixel += GLCM_IMC2;
+								}
+							}
+							if(texturemenu.create_map.getState()==true && texturemenu.direction_0.getState()==true){
+								if(texturemenu.glcm_ASM.getState()==true){
+									GLCM_ASM_0_Array[indexH*_W+indexW] = (float) GLCM_ASM; 
+								}
+								if(texturemenu.glcm_CON.getState()==true){
+									GLCM_CON_0_Array[indexH*_W+indexW] = (float) GLCM_CON; 
+								}
+								if(texturemenu.glcm_ENT.getState()==true){
+									GLCM_ENT_0_Array[indexH*_W+indexW] = (float) GLCM_ENT; 
+								}
+								if(texturemenu.glcm_MEAN.getState()==true){
+									GLCM_MEAN_0_Array[indexH*_W+indexW] = (float) GLCM_MEAN; 
+								}
+								if(texturemenu.glcm_VAR.getState()==true){
+									GLCM_VAR_0_Array[indexH*_W+indexW] = (float) GLCM_VAR; 
+								}
+								if(texturemenu.glcm_ACO.getState()==true){
+									GLCM_ACO_0_Array[indexH*_W+indexW] = (float) GLCM_ACO; 
+								}
+								if(texturemenu.glcm_CLP.getState()==true){
+									GLCM_CLP_0_Array[indexH*_W+indexW] = (float) GLCM_CLP; 
+								}
+								if(texturemenu.glcm_CLS.getState()==true){
+									GLCM_CLS_0_Array[indexH*_W+indexW] = (float) GLCM_CLS; 
+								}
+								if(texturemenu.glcm_CLT.getState()==true){
+									GLCM_CLT_0_Array[indexH*_W+indexW] = (float) GLCM_CLT; 
+								}
+								if(texturemenu.glcm_DIS.getState()==true){
+									GLCM_DIS_0_Array[indexH*_W+indexW] = (float) GLCM_DIS; 
+								}
+								if(texturemenu.glcm_HOM.getState()==true){
+									GLCM_HOM_0_Array[indexH*_W+indexW] = (float) GLCM_HOM; 
+								}
+								if(texturemenu.glcm_IDM.getState()==true){
+									GLCM_IDM_0_Array[indexH*_W+indexW] = (float) GLCM_IDM; 
+								}
+								if(texturemenu.glcm_IDMN.getState()==true){
+									GLCM_IDMN_0_Array[indexH*_W+indexW] = (float) GLCM_IDMN; 
+								}
+								if(texturemenu.glcm_IDN.getState()==true){
+									GLCM_IDN_0_Array[indexH*_W+indexW] = (float) GLCM_IDN; 
+								}
+								if(texturemenu.glcm_CORR.getState()==true){
+									GLCM_CORR_0_Array[indexH*_W+indexW] = (float) GLCM_CORR; 
+								}
+								if(texturemenu.glcm_IVAR.getState()==true){
+									GLCM_IVAR_0_Array[indexH*_W+indexW] = (float) GLCM_IVAR; 
+								}
+								if(texturemenu.glcm_MAXP.getState()==true){
+									GLCM_MAXP_0_Array[indexH*_W+indexW] = (float) GLCM_MAXP; 
+								}
+								if(texturemenu.glcm_SUMA.getState()==true){
+									GLCM_SUMA_0_Array[indexH*_W+indexW] = (float) GLCM_SUMA; 
+								}
+								if(texturemenu.glcm_SUMV.getState()==true){
+									GLCM_SUMV_0_Array[indexH*_W+indexW] = (float) GLCM_SUMV; 
+								}
+								if(texturemenu.glcm_SUME.getState()==true){
+									GLCM_SUME_0_Array[indexH*_W+indexW] = (float) GLCM_SUME; 
+								}
+								if(texturemenu.glcm_DIFV.getState()==true){
+									GLCM_DIFV_0_Array[indexH*_W+indexW] = (float) GLCM_DIFV; 
+								}
+								if(texturemenu.glcm_DIFE.getState()==true){
+									GLCM_DIFE_0_Array[indexH*_W+indexW] = (float) GLCM_DIFE; 
+								}
+								if(texturemenu.glcm_IMC1.getState()==true){
+									GLCM_IMC1_0_Array[indexH*_W+indexW] = (float) GLCM_IMC1; 
+								}
+								if(texturemenu.glcm_IMC2.getState()==true){
+									GLCM_IMC2_0_Array[indexH*_W+indexW] = (float) GLCM_IMC2; 
+								}
+							}
+						}
+
+						//45¡Æ
+						GLCM_mat = new double[histogramBins][histogramBins];
+						if(texturemenu.direction_45.getState()==true || texturemenu.direction_average.getState()==true){
+							for(int kernel_h=-limitSize+1;kernel_h<=limitSize;kernel_h++){
+								for(int kernel_w=-limitSize;kernel_w<limitSize;kernel_w++){
+									int referecePixel = (int)img2DArray[indexW+kernel_w][indexH+kernel_h];
+									int neighborPixel = (int)img2DArray[indexW+kernel_w+1][indexH+kernel_h-1];
+									GLCM_mat[referecePixel][neighborPixel] = GLCM_mat[referecePixel][neighborPixel]+1; 
+									GLCM_mat[neighborPixel][referecePixel] = GLCM_mat[neighborPixel][referecePixel]+1; //symetry mtx
+								}
+							}
+							for(int h=0;h<histogramBins;h++){ // normalization
+								for(int w=0;w<histogramBins;w++){                                           
+									GLCM_mat[w][h] = GLCM_mat[w][h]/ ((windowSize-1)*(windowSize-1)*2);
+								}
+							}
+
+							double P_ij = 0;
+							double GLCM_ASM = 0.0, GLCM_CON = 0.0, GLCM_ENT = 0.0, GLCM_MEAN = 0.0, GLCM_VAR = 0.0;
+							double GLCM_ACO = 0.0, GLCM_CLP = 0.0, GLCM_CLS = 0.0, GLCM_CLT = 0.0, GLCM_DIS = 0.0;
+							double GLCM_HOM = 0.0, GLCM_IDM = 0.0, GLCM_IDMN = 0.0, GLCM_IDN = 0.0;
+							double GLCM_CORR = 0.0, GLCM_IVAR = 0.0, GLCM_MAXP = 0.0;						
+							double GLCM_SUMA = 0.0, GLCM_SUMV = 0.0, GLCM_SUME = 0.0;
+							double GLCM_DIFA = 0.0, GLCM_DIFV = 0.0, GLCM_DIFE = 0.0;						
+							double GLCM_IMC1 = 0.0, GLCM_IMC2 = 0.0;
+
+							// 3) calculate marginal, diff, sum matrix
+							// 3-1) for marginal, GLCM is symetry mtx. Px is same with Py. Ux=Uy=U(GLCM_MEAN).						
+							double[] Px = new double[histogramBins];
+							Arrays.fill(Px, 0.0);
+							double[] diff_i = new double[histogramBins];
+							Arrays.fill(diff_i, 0.0);
+							double[] sum_i = new double[2*histogramBins-1];
+							Arrays.fill(sum_i, 0.0);
+							int diff, sum;
+							for (int i = 0; i < histogramBins; i ++){
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = GLCM_mat[i][j];
+									if(P_ij==0)continue;
+									diff = Math.abs(i-j);
+									sum = i+j;
+
+									diff_i[diff] +=P_ij;
+									sum_i[sum] +=P_ij;
+									Px[i] += P_ij;
+
+									GLCM_MEAN += i * P_ij;
+								}
+							}
+
+							for (int i = 0; i < histogramBins; i ++){
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = GLCM_mat[i][j];
+									if(P_ij==0)continue;
+									// 1) Angular secon moment or Energy
+									GLCM_ASM += Math.pow(P_ij, 2);
+
+									// 2) Contrast
+									GLCM_CON += P_ij * Math.pow(i-j, 2);
+
+									// 3) Entropy 
+									if (P_ij != 0){
+										GLCM_ENT += P_ij * (-1 * Math.log(P_ij)/Math.log(2));
+									}
+
+									// 4) Mean is already calculated. 
+									// 5) Variance 
+									GLCM_VAR += P_ij * Math.pow(i - GLCM_MEAN, 2);
+
+									// 6) Autocorrelation1
+									GLCM_ACO += P_ij * i * j;
+
+									// 7) Cluster Prominence
+									GLCM_CLP += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 4); 
+
+									// 8) Cluster Shade
+									GLCM_CLS += P_ij * Math.pow(i + j - GLCM_MEAN -GLCM_MEAN, 3);
+
+									// 9) Cluster Tendency
+									GLCM_CLT += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 2);
+
+									// 10) Dissimilarity
+									GLCM_DIS += P_ij * Math.abs(i-j);
+
+									// 11) Homogeneity 1
+									GLCM_HOM += P_ij / (1 + Math.abs(i-j));
+
+									// 12) Homogeneity 2 or Inverse difference moment(IDM)
+									GLCM_IDM += P_ij / (1 + Math.pow(i-j, 2));
+
+									// 13) Inverse difference moment normalized (IDMN)
+									GLCM_IDMN += P_ij / (1 + (Math.pow(i-j, 2) / Math.pow(histogramBins,2) ) );
+
+									// 14) Inverse difference normalized (IDN)
+									GLCM_IDN += P_ij / (1 + (Math.pow(i-j, 2) / ((double)histogramBins) ) );
+
+									// 15 Correlation
+									GLCM_CORR += P_ij *(i-GLCM_MEAN) * (j-GLCM_MEAN);
+
+									// 16) Inverse Variance
+									if (i != j){
+										GLCM_IVAR += P_ij / Math.pow(i-j, 2);
+									}
+
+									// 17) Maximum Probability
+									if (GLCM_MAXP <= P_ij){
+										GLCM_MAXP = P_ij;
 									}
 								}
 							}
 
-							//45¡Æ
-							GLCM_mat = new double[histogramBins][histogramBins];
-							if(texturemenu.direction_45.getState()==true || texturemenu.direction_average.getState()==true){
-								for(int kernel_h=-limitSize+1;kernel_h<=limitSize;kernel_h++){
-									for(int kernel_w=-limitSize;kernel_w<limitSize;kernel_w++){
-										int referecePixel = (int)img2DArray[indexW+kernel_w][indexH+kernel_h];
-										int neighborPixel = (int)img2DArray[indexW+kernel_w+1][indexH+kernel_h-1];
-										GLCM_mat[referecePixel][neighborPixel] = GLCM_mat[referecePixel][neighborPixel]+1; 
-										GLCM_mat[neighborPixel][referecePixel] = GLCM_mat[neighborPixel][referecePixel]+1; //symetry mtx
-									}
-								}
-								for(int h=0;h<histogramBins;h++){ // normalization
-									for(int w=0;w<histogramBins;w++){                                           
-										GLCM_mat[w][h] = GLCM_mat[w][h]/ ((windowSize-1)*(windowSize-1)*2);
-									}
-								}
-
-								double P_ij = 0;
-								double GLCM_ASM = 0.0, GLCM_CON = 0.0, GLCM_ENT = 0.0, GLCM_MEAN = 0.0, GLCM_VAR = 0.0;
-								double GLCM_ACO = 0.0, GLCM_CLP = 0.0, GLCM_CLS = 0.0, GLCM_CLT = 0.0, GLCM_DIS = 0.0;
-								double GLCM_HOM = 0.0, GLCM_IDM = 0.0, GLCM_IDMN = 0.0, GLCM_IDN = 0.0;
-								double GLCM_CORR = 0.0, GLCM_IVAR = 0.0, GLCM_MAXP = 0.0;						
-								double GLCM_SUMA = 0.0, GLCM_SUMV = 0.0, GLCM_SUME = 0.0;
-								double GLCM_DIFA = 0.0, GLCM_DIFV = 0.0, GLCM_DIFE = 0.0;						
-								double GLCM_IMC1 = 0.0, GLCM_IMC2 = 0.0;
-
-								// 3) calculate marginal, diff, sum matrix
-								// 3-1) for marginal, GLCM is symetry mtx. Px is same with Py. Ux=Uy=U(GLCM_MEAN).						
-								double[] Px = new double[histogramBins];
-								Arrays.fill(Px, 0.0);
-								double[] diff_i = new double[histogramBins];
-								Arrays.fill(diff_i, 0.0);
-								double[] sum_i = new double[2*histogramBins-1];
-								Arrays.fill(sum_i, 0.0);
-								int diff, sum;
-								for (int i = 0; i < histogramBins; i ++){
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = GLCM_mat[i][j];
-										if(P_ij==0)continue;
-										diff = Math.abs(i-j);
-										sum = i+j;
-
-										diff_i[diff] +=P_ij;
-										sum_i[sum] +=P_ij;
-										Px[i] += P_ij;
-
-										GLCM_MEAN += i * P_ij;
-									}
-								}
-
-								for (int i = 0; i < histogramBins; i ++){
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = GLCM_mat[i][j];
-										if(P_ij==0)continue;
-										// 1) Angular secon moment or Energy
-										GLCM_ASM += Math.pow(P_ij, 2);
-
-										// 2) Contrast
-										GLCM_CON += P_ij * Math.pow(i-j, 2);
-
-										// 3) Entropy 
-										if (P_ij != 0){
-											GLCM_ENT += P_ij * (-1 * Math.log(P_ij)/Math.log(2));
-										}
-
-										// 4) Mean is already calculated. 
-										// 5) Variance 
-										GLCM_VAR += P_ij * Math.pow(i - GLCM_MEAN, 2);
-
-										// 6) Autocorrelation1
-										GLCM_ACO += P_ij * i * j;
-
-										// 7) Cluster Prominence
-										GLCM_CLP += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 4); 
-
-										// 8) Cluster Shade
-										GLCM_CLS += P_ij * Math.pow(i + j - GLCM_MEAN -GLCM_MEAN, 3);
-
-										// 9) Cluster Tendency
-										GLCM_CLT += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 2);
-
-										// 10) Dissimilarity
-										GLCM_DIS += P_ij * Math.abs(i-j);
-
-										// 11) Homogeneity 1
-										GLCM_HOM += P_ij / (1 + Math.abs(i-j));
-
-										// 12) Homogeneity 2 or Inverse difference moment(IDM)
-										GLCM_IDM += P_ij / (1 + Math.pow(i-j, 2));
-
-										// 13) Inverse difference moment normalized (IDMN)
-										GLCM_IDMN += P_ij / (1 + (Math.pow(i-j, 2) / Math.pow(histogramBins,2) ) );
-
-										// 14) Inverse difference normalized (IDN)
-										GLCM_IDN += P_ij / (1 + (Math.pow(i-j, 2) / ((double)histogramBins) ) );
-
-										// 15 Correlation
-										GLCM_CORR += P_ij *(i-GLCM_MEAN) * (j-GLCM_MEAN);
-
-										// 16) Inverse Variance
-										if (i != j){
-											GLCM_IVAR += P_ij / Math.pow(i-j, 2);
-										}
-
-										// 17) Maximum Probability
-										if (GLCM_MAXP <= P_ij){
-											GLCM_MAXP = P_ij;
-										}
-									}
-								}
-								
-								if(GLCM_VAR!=0)
+							if(GLCM_VAR!=0)
 								GLCM_CORR = GLCM_CORR / GLCM_VAR;
-								
-								// 18 ~ 20)  Sum Average (SUMA), Variance (SUMV), Entropy (SUME)
-								for (int i = 0; i < sum_i.length; i ++){
-									GLCM_SUMA += sum_i[i] * i;
-									if(sum_i[i] != 0){
-										GLCM_SUME -= sum_i[i] * Math.log(sum_i[i])/Math.log(2);
-									}
-								}
-								for (int i = 0; i < sum_i.length; i ++){
-									GLCM_SUMV += Math.pow(i-GLCM_SUMA, 2) * sum_i[i];
-								}
 
-								// 21 ~ 23)  Difference Average (DIFA), Variance (DIFV), Entropy (DIFE)
-								for (int i = 0; i < diff_i.length; i ++){
-									GLCM_DIFA += diff_i[i] * i;
-									if(diff_i[i] != 0){
-										GLCM_DIFE -= diff_i[i] * Math.log(diff_i[i])/Math.log(2);
-									}
+							// 18 ~ 20)  Sum Average (SUMA), Variance (SUMV), Entropy (SUME)
+							for (int i = 0; i < sum_i.length; i ++){
+								GLCM_SUMA += sum_i[i] * i;
+								if(sum_i[i] != 0){
+									GLCM_SUME -= sum_i[i] * Math.log(sum_i[i])/Math.log(2);
 								}
-								for (int i = 0; i < diff_i.length; i ++){
-									GLCM_DIFV += Math.pow(i-GLCM_DIFA, 2) * diff_i[i];
-								}
+							}
+							for (int i = 0; i < sum_i.length; i ++){
+								GLCM_SUMV += Math.pow(i-GLCM_SUMA, 2) * sum_i[i];
+							}
 
-								// looping for HXY matrix..
-								double HX = 0.0, HXY = 0.0, HXY1 = 0.0, HXY2 = 0.0; 
-								for (int i = 0; i < histogramBins; i ++){
-									if(Px[i]!=0){
-										HX -= Px[i] * Math.log(Px[i]);								
-									} 
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = P_ij = GLCM_mat[i][j];
-
-										if(P_ij != 0){
-											HXY -= P_ij * Math.log(P_ij);
-										}
-										if(Px[i]!=0 && Px[j] !=0){
-											HXY1 -= P_ij * Math.log(Px[i]*Px[j]);
-											HXY2 -= Px[i]*Px[j] * Math.log(Px[i]*Px[j]);
-										}				
-									}
+							// 21 ~ 23)  Difference Average (DIFA), Variance (DIFV), Entropy (DIFE)
+							for (int i = 0; i < diff_i.length; i ++){
+								GLCM_DIFA += diff_i[i] * i;
+								if(diff_i[i] != 0){
+									GLCM_DIFE -= diff_i[i] * Math.log(diff_i[i])/Math.log(2);
 								}
-								// 24) Informational measure of correlation 1 (IMC1)
-								if(HX!=0)
+							}
+							for (int i = 0; i < diff_i.length; i ++){
+								GLCM_DIFV += Math.pow(i-GLCM_DIFA, 2) * diff_i[i];
+							}
+
+							// looping for HXY matrix..
+							double HX = 0.0, HXY = 0.0, HXY1 = 0.0, HXY2 = 0.0; 
+							for (int i = 0; i < histogramBins; i ++){
+								if(Px[i]!=0){
+									HX -= Px[i] * Math.log(Px[i]);								
+								} 
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = P_ij = GLCM_mat[i][j];
+
+									if(P_ij != 0){
+										HXY -= P_ij * Math.log(P_ij);
+									}
+									if(Px[i]!=0 && Px[j] !=0){
+										HXY1 -= P_ij * Math.log(Px[i]*Px[j]);
+										HXY2 -= Px[i]*Px[j] * Math.log(Px[i]*Px[j]);
+									}				
+								}
+							}
+							// 24) Informational measure of correlation 1 (IMC1)
+							if(HX!=0)
 								GLCM_IMC1 = (HXY - HXY1) / HX;
 
-								// 25) Informational measure of correlation 1 (IMC1)
-								if(HXY2-HXY>0)
+							// 25) Informational measure of correlation 1 (IMC1)
+							if(HXY2-HXY>0)
 								GLCM_IMC2 = Math.sqrt(1-Math.exp(-2*(HXY2-HXY)));
 
-								if(texturemenu.create_value.getState()==true){
+							if(texturemenu.create_value.getState()==true){
+								if(texturemenu.direction_45.getState()==true){
 									GLCM_ASM_45 += GLCM_ASM; GLCM_CON_45 += GLCM_CON; GLCM_ENT_45 += GLCM_ENT; GLCM_MEAN_45 += GLCM_MEAN; GLCM_VAR_45 += GLCM_VAR;
 									GLCM_ACO_45+= GLCM_ACO; GLCM_CLP_45 += GLCM_CLP; GLCM_CLS_45 += GLCM_CLS; GLCM_CLT_45 += GLCM_CLT; GLCM_DIS_45 += GLCM_DIS;
 									GLCM_HOM_45 += GLCM_HOM; GLCM_IDM_45 += GLCM_IDM; GLCM_IDMN_45 += GLCM_IDMN; GLCM_IDN_45 += GLCM_IDN;
@@ -757,183 +1257,267 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 									GLCM_SUMA_45 += GLCM_SUMA; GLCM_SUMV_45 += GLCM_SUMV; GLCM_SUME_45 += GLCM_SUME;
 									GLCM_DIFA_45 += GLCM_DIFA; GLCM_DIFV_45 += GLCM_DIFV; GLCM_DIFE_45 += GLCM_DIFE;						
 									GLCM_IMC1_45 += GLCM_IMC1; GLCM_IMC2_45 += GLCM_IMC2;
-									if(texturemenu.direction_average.getState()==true){
-										GLCM_ASM_ave += GLCM_ASM; GLCM_CON_ave += GLCM_CON; GLCM_ENT_ave += GLCM_ENT; GLCM_MEAN_ave += GLCM_MEAN; GLCM_VAR_ave += GLCM_VAR;
-										GLCM_ACO_ave+= GLCM_ACO; GLCM_CLP_ave += GLCM_CLP; GLCM_CLS_ave += GLCM_CLS; GLCM_CLT_ave += GLCM_CLT; GLCM_DIS_ave += GLCM_DIS;
-										GLCM_HOM_ave += GLCM_HOM; GLCM_IDM_ave += GLCM_IDM; GLCM_IDMN_ave += GLCM_IDMN; GLCM_IDN_ave += GLCM_IDN;
-										GLCM_CORR_ave += GLCM_CORR; GLCM_IVAR_ave += GLCM_IVAR; GLCM_MAXP_ave += GLCM_MAXP;						
-										GLCM_SUMA_ave += GLCM_SUMA; GLCM_SUMV_ave += GLCM_SUMV; GLCM_SUME_ave += GLCM_SUME;
-										GLCM_DIFA_ave += GLCM_DIFA; GLCM_DIFV_ave += GLCM_DIFV; GLCM_DIFE_ave += GLCM_DIFE;						
-										GLCM_IMC1_ave += GLCM_IMC1; GLCM_IMC2_ave += GLCM_IMC2;
-									}
 								}
-
+								
+								if(texturemenu.direction_average.getState()==true){
+									GLCM_ASM_ave += GLCM_ASM; GLCM_CON_ave += GLCM_CON; GLCM_ENT_ave += GLCM_ENT; GLCM_MEAN_ave += GLCM_MEAN; GLCM_VAR_ave += GLCM_VAR;
+									GLCM_ACO_ave+= GLCM_ACO; GLCM_CLP_ave += GLCM_CLP; GLCM_CLS_ave += GLCM_CLS; GLCM_CLT_ave += GLCM_CLT; GLCM_DIS_ave += GLCM_DIS;
+									GLCM_HOM_ave += GLCM_HOM; GLCM_IDM_ave += GLCM_IDM; GLCM_IDMN_ave += GLCM_IDMN; GLCM_IDN_ave += GLCM_IDN;
+									GLCM_CORR_ave += GLCM_CORR; GLCM_IVAR_ave += GLCM_IVAR; GLCM_MAXP_ave += GLCM_MAXP;						
+									GLCM_SUMA_ave += GLCM_SUMA; GLCM_SUMV_ave += GLCM_SUMV; GLCM_SUME_ave += GLCM_SUME;
+									GLCM_DIFA_ave += GLCM_DIFA; GLCM_DIFV_ave += GLCM_DIFV; GLCM_DIFE_ave += GLCM_DIFE;						
+									GLCM_IMC1_ave += GLCM_IMC1; GLCM_IMC2_ave += GLCM_IMC2;
+									GLCM_ASM_ave_pixel += GLCM_ASM; GLCM_CON_ave_pixel += GLCM_CON; GLCM_ENT_ave_pixel += GLCM_ENT; GLCM_MEAN_ave_pixel += GLCM_MEAN; GLCM_VAR_ave_pixel += GLCM_VAR;
+									GLCM_ACO_ave_pixel+= GLCM_ACO; GLCM_CLP_ave_pixel += GLCM_CLP; GLCM_CLS_ave_pixel += GLCM_CLS; GLCM_CLT_ave_pixel += GLCM_CLT; GLCM_DIS_ave_pixel += GLCM_DIS;
+									GLCM_HOM_ave_pixel += GLCM_HOM; GLCM_IDM_ave_pixel += GLCM_IDM; GLCM_IDMN_ave_pixel += GLCM_IDMN; GLCM_IDN_ave_pixel += GLCM_IDN;
+									GLCM_CORR_ave_pixel += GLCM_CORR; GLCM_IVAR_ave_pixel += GLCM_IVAR; GLCM_MAXP_ave_pixel += GLCM_MAXP;						
+									GLCM_SUMA_ave_pixel += GLCM_SUMA; GLCM_SUMV_ave_pixel += GLCM_SUMV; GLCM_SUME_ave_pixel += GLCM_SUME;
+									GLCM_DIFA_ave_pixel += GLCM_DIFA; GLCM_DIFV_ave_pixel += GLCM_DIFV; GLCM_DIFE_ave_pixel += GLCM_DIFE;						
+									GLCM_IMC1_ave_pixel += GLCM_IMC1; GLCM_IMC2_ave_pixel += GLCM_IMC2;
+								}
 							}
 
-							//90¡Æ
-							GLCM_mat = new double[histogramBins][histogramBins];
-							if(texturemenu.direction_90.getState()==true || texturemenu.direction_average.getState()==true){
-								int windowCount = 0;
-								for(int kernel_h=-limitSize;kernel_h<=limitSize;kernel_h++){
-									for(int kernel_w=-limitSize+1;kernel_w<=limitSize;kernel_w++){
-										windowCount++;
-										int referecePixel = (int)img2DArray[indexW+kernel_w][indexH+kernel_h];
-										int neighborPixel = (int)img2DArray[indexW+kernel_w-1][indexH+kernel_h];
-										GLCM_mat[referecePixel][neighborPixel] = GLCM_mat[referecePixel][neighborPixel]+1; 
-										GLCM_mat[neighborPixel][referecePixel] = GLCM_mat[neighborPixel][referecePixel]+1; //symetry mtx
+							if(texturemenu.create_map.getState()==true && texturemenu.direction_45.getState()==true){
+								if(texturemenu.glcm_ASM.getState()==true){
+									GLCM_ASM_45_Array[indexH*_W+indexW] = (float) GLCM_ASM; 
+								}
+								if(texturemenu.glcm_CON.getState()==true){
+									GLCM_CON_45_Array[indexH*_W+indexW] = (float) GLCM_CON; 
+								}
+								if(texturemenu.glcm_ENT.getState()==true){
+									GLCM_ENT_45_Array[indexH*_W+indexW] = (float) GLCM_ENT; 
+								}
+								if(texturemenu.glcm_MEAN.getState()==true){
+									GLCM_MEAN_45_Array[indexH*_W+indexW] = (float) GLCM_MEAN; 
+								}
+								if(texturemenu.glcm_VAR.getState()==true){
+									GLCM_VAR_45_Array[indexH*_W+indexW] = (float) GLCM_VAR; 
+								}
+								if(texturemenu.glcm_ACO.getState()==true){
+									GLCM_ACO_45_Array[indexH*_W+indexW] = (float) GLCM_ACO; 
+								}
+								if(texturemenu.glcm_CLP.getState()==true){
+									GLCM_CLP_45_Array[indexH*_W+indexW] = (float) GLCM_CLP; 
+								}
+								if(texturemenu.glcm_CLS.getState()==true){
+									GLCM_CLS_45_Array[indexH*_W+indexW] = (float) GLCM_CLS; 
+								}
+								if(texturemenu.glcm_CLT.getState()==true){
+									GLCM_CLT_45_Array[indexH*_W+indexW] = (float) GLCM_CLT; 
+								}
+								if(texturemenu.glcm_DIS.getState()==true){
+									GLCM_DIS_45_Array[indexH*_W+indexW] = (float) GLCM_DIS; 
+								}
+								if(texturemenu.glcm_HOM.getState()==true){
+									GLCM_HOM_45_Array[indexH*_W+indexW] = (float) GLCM_HOM; 
+								}
+								if(texturemenu.glcm_IDM.getState()==true){
+									GLCM_IDM_45_Array[indexH*_W+indexW] = (float) GLCM_IDM; 
+								}
+								if(texturemenu.glcm_IDMN.getState()==true){
+									GLCM_IDMN_45_Array[indexH*_W+indexW] = (float) GLCM_IDMN; 
+								}
+								if(texturemenu.glcm_IDN.getState()==true){
+									GLCM_IDN_45_Array[indexH*_W+indexW] = (float) GLCM_IDN; 
+								}
+								if(texturemenu.glcm_CORR.getState()==true){
+									GLCM_CORR_45_Array[indexH*_W+indexW] = (float) GLCM_CORR; 
+								}
+								if(texturemenu.glcm_IVAR.getState()==true){
+									GLCM_IVAR_45_Array[indexH*_W+indexW] = (float) GLCM_IVAR; 
+								}
+								if(texturemenu.glcm_MAXP.getState()==true){
+									GLCM_MAXP_45_Array[indexH*_W+indexW] = (float) GLCM_MAXP; 
+								}
+								if(texturemenu.glcm_SUMA.getState()==true){
+									GLCM_SUMA_45_Array[indexH*_W+indexW] = (float) GLCM_SUMA; 
+								}
+								if(texturemenu.glcm_SUMV.getState()==true){
+									GLCM_SUMV_45_Array[indexH*_W+indexW] = (float) GLCM_SUMV; 
+								}
+								if(texturemenu.glcm_SUME.getState()==true){
+									GLCM_SUME_45_Array[indexH*_W+indexW] = (float) GLCM_SUME; 
+								}
+								if(texturemenu.glcm_DIFV.getState()==true){
+									GLCM_DIFV_45_Array[indexH*_W+indexW] = (float) GLCM_DIFV; 
+								}
+								if(texturemenu.glcm_DIFE.getState()==true){
+									GLCM_DIFE_45_Array[indexH*_W+indexW] = (float) GLCM_DIFE; 
+								}
+								if(texturemenu.glcm_IMC1.getState()==true){
+									GLCM_IMC1_45_Array[indexH*_W+indexW] = (float) GLCM_IMC1; 
+								}
+								if(texturemenu.glcm_IMC2.getState()==true){
+									GLCM_IMC2_45_Array[indexH*_W+indexW] = (float) GLCM_IMC2; 
+								}
+							}
+						}
+
+						//90¡Æ
+						GLCM_mat = new double[histogramBins][histogramBins];
+						if(texturemenu.direction_90.getState()==true || texturemenu.direction_average.getState()==true){
+							int windowCount = 0;
+							for(int kernel_h=-limitSize;kernel_h<=limitSize;kernel_h++){
+								for(int kernel_w=-limitSize+1;kernel_w<=limitSize;kernel_w++){
+									windowCount++;
+									int referecePixel = (int)img2DArray[indexW+kernel_w][indexH+kernel_h];
+									int neighborPixel = (int)img2DArray[indexW+kernel_w-1][indexH+kernel_h];
+									GLCM_mat[referecePixel][neighborPixel] = GLCM_mat[referecePixel][neighborPixel]+1; 
+									GLCM_mat[neighborPixel][referecePixel] = GLCM_mat[neighborPixel][referecePixel]+1; //symetry mtx
+								}
+							}
+							for(int h=0;h<histogramBins;h++){ // normalization
+								for(int w=0;w<histogramBins;w++){
+									GLCM_mat[w][h] = GLCM_mat[w][h]/ (windowSize*(windowSize-1)*2);
+								}
+							}
+
+							double P_ij = 0;
+							double GLCM_ASM = 0.0, GLCM_CON = 0.0, GLCM_ENT = 0.0, GLCM_MEAN = 0.0, GLCM_VAR = 0.0;
+							double GLCM_ACO = 0.0, GLCM_CLP = 0.0, GLCM_CLS = 0.0, GLCM_CLT = 0.0, GLCM_DIS = 0.0;
+							double GLCM_HOM = 0.0, GLCM_IDM = 0.0, GLCM_IDMN = 0.0, GLCM_IDN = 0.0;
+							double GLCM_CORR = 0.0, GLCM_IVAR = 0.0, GLCM_MAXP = 0.0;						
+							double GLCM_SUMA = 0.0, GLCM_SUMV = 0.0, GLCM_SUME = 0.0;
+							double GLCM_DIFA = 0.0, GLCM_DIFV = 0.0, GLCM_DIFE = 0.0;						
+							double GLCM_IMC1 = 0.0, GLCM_IMC2 = 0.0;
+
+							// 3) calculate marginal, diff, sum matrix
+							// 3-1) for marginal, GLCM is symetry mtx. Px is same with Py. Ux=Uy=U(GLCM_MEAN).						
+							double[] Px = new double[histogramBins];
+							Arrays.fill(Px, 0.0);
+							double[] diff_i = new double[histogramBins];
+							Arrays.fill(diff_i, 0.0);
+							double[] sum_i = new double[2*histogramBins-1];
+							Arrays.fill(sum_i, 0.0);
+							int diff, sum;
+							for (int i = 0; i < histogramBins; i ++){
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = GLCM_mat[i][j];
+									if(P_ij==0)continue;
+									diff = Math.abs(i-j);
+									sum = i+j;
+
+									diff_i[diff] +=P_ij;
+									sum_i[sum] +=P_ij;
+									Px[i] += P_ij;
+
+									GLCM_MEAN += i * P_ij;
+								}
+							}
+
+							for (int i = 0; i < histogramBins; i ++){
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = GLCM_mat[i][j];
+									if(P_ij==0)continue;
+									// 1) Angular secon moment or Energy
+									GLCM_ASM += Math.pow(P_ij, 2);
+
+									// 2) Contrast
+									GLCM_CON += P_ij * Math.pow(i-j, 2);
+
+									// 3) Entropy 
+									if (P_ij != 0){
+										GLCM_ENT += P_ij * (-1 * Math.log(P_ij)/Math.log(2));
+									}
+
+									// 4) Mean is already calculated. 
+									// 5) Variance 
+									GLCM_VAR += P_ij * Math.pow(i - GLCM_MEAN, 2);
+
+									// 6) Autocorrelation1
+									GLCM_ACO += P_ij * i * j;
+
+									// 7) Cluster Prominence
+									GLCM_CLP += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 4); 
+
+									// 8) Cluster Shade
+									GLCM_CLS += P_ij * Math.pow(i + j - GLCM_MEAN -GLCM_MEAN, 3);
+
+									// 9) Cluster Tendency
+									GLCM_CLT += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 2);
+
+									// 10) Dissimilarity
+									GLCM_DIS += P_ij * Math.abs(i-j);
+
+									// 11) Homogeneity 1
+									GLCM_HOM += P_ij / (1 + Math.abs(i-j));
+
+									// 12) Homogeneity 2 or Inverse difference moment(IDM)
+									GLCM_IDM += P_ij / (1 + Math.pow(i-j, 2));
+
+									// 13) Inverse difference moment normalized (IDMN)
+									GLCM_IDMN += P_ij / (1 + (Math.pow(i-j, 2) / Math.pow(histogramBins,2) ) );
+
+									// 14) Inverse difference normalized (IDN)
+									GLCM_IDN += P_ij / (1 + (Math.pow(i-j, 2) / ((double)histogramBins) ) );
+
+									// 15 Correlation
+									GLCM_CORR += P_ij *(i-GLCM_MEAN) * (j-GLCM_MEAN);
+
+									// 16) Inverse Variance
+									if (i != j){
+										GLCM_IVAR += P_ij / Math.pow(i-j, 2);
+									}
+
+									// 17) Maximum Probability
+									if (GLCM_MAXP <= P_ij){
+										GLCM_MAXP = P_ij;
 									}
 								}
-								for(int h=0;h<histogramBins;h++){ // normalization
-									for(int w=0;w<histogramBins;w++){
-										GLCM_mat[w][h] = GLCM_mat[w][h]/ (windowSize*(windowSize-1)*2);
-									}
-								}
-
-								double P_ij = 0;
-								double GLCM_ASM = 0.0, GLCM_CON = 0.0, GLCM_ENT = 0.0, GLCM_MEAN = 0.0, GLCM_VAR = 0.0;
-								double GLCM_ACO = 0.0, GLCM_CLP = 0.0, GLCM_CLS = 0.0, GLCM_CLT = 0.0, GLCM_DIS = 0.0;
-								double GLCM_HOM = 0.0, GLCM_IDM = 0.0, GLCM_IDMN = 0.0, GLCM_IDN = 0.0;
-								double GLCM_CORR = 0.0, GLCM_IVAR = 0.0, GLCM_MAXP = 0.0;						
-								double GLCM_SUMA = 0.0, GLCM_SUMV = 0.0, GLCM_SUME = 0.0;
-								double GLCM_DIFA = 0.0, GLCM_DIFV = 0.0, GLCM_DIFE = 0.0;						
-								double GLCM_IMC1 = 0.0, GLCM_IMC2 = 0.0;
-
-								// 3) calculate marginal, diff, sum matrix
-								// 3-1) for marginal, GLCM is symetry mtx. Px is same with Py. Ux=Uy=U(GLCM_MEAN).						
-								double[] Px = new double[histogramBins];
-								Arrays.fill(Px, 0.0);
-								double[] diff_i = new double[histogramBins];
-								Arrays.fill(diff_i, 0.0);
-								double[] sum_i = new double[2*histogramBins-1];
-								Arrays.fill(sum_i, 0.0);
-								int diff, sum;
-								for (int i = 0; i < histogramBins; i ++){
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = GLCM_mat[i][j];
-										if(P_ij==0)continue;
-										diff = Math.abs(i-j);
-										sum = i+j;
-
-										diff_i[diff] +=P_ij;
-										sum_i[sum] +=P_ij;
-										Px[i] += P_ij;
-
-										GLCM_MEAN += i * P_ij;
-									}
-								}
-
-								for (int i = 0; i < histogramBins; i ++){
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = GLCM_mat[i][j];
-										if(P_ij==0)continue;
-										// 1) Angular secon moment or Energy
-										GLCM_ASM += Math.pow(P_ij, 2);
-
-										// 2) Contrast
-										GLCM_CON += P_ij * Math.pow(i-j, 2);
-
-										// 3) Entropy 
-										if (P_ij != 0){
-											GLCM_ENT += P_ij * (-1 * Math.log(P_ij)/Math.log(2));
-										}
-
-										// 4) Mean is already calculated. 
-										// 5) Variance 
-										GLCM_VAR += P_ij * Math.pow(i - GLCM_MEAN, 2);
-
-										// 6) Autocorrelation1
-										GLCM_ACO += P_ij * i * j;
-
-										// 7) Cluster Prominence
-										GLCM_CLP += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 4); 
-
-										// 8) Cluster Shade
-										GLCM_CLS += P_ij * Math.pow(i + j - GLCM_MEAN -GLCM_MEAN, 3);
-
-										// 9) Cluster Tendency
-										GLCM_CLT += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 2);
-
-										// 10) Dissimilarity
-										GLCM_DIS += P_ij * Math.abs(i-j);
-
-										// 11) Homogeneity 1
-										GLCM_HOM += P_ij / (1 + Math.abs(i-j));
-
-										// 12) Homogeneity 2 or Inverse difference moment(IDM)
-										GLCM_IDM += P_ij / (1 + Math.pow(i-j, 2));
-
-										// 13) Inverse difference moment normalized (IDMN)
-										GLCM_IDMN += P_ij / (1 + (Math.pow(i-j, 2) / Math.pow(histogramBins,2) ) );
-
-										// 14) Inverse difference normalized (IDN)
-										GLCM_IDN += P_ij / (1 + (Math.pow(i-j, 2) / ((double)histogramBins) ) );
-
-										// 15 Correlation
-										GLCM_CORR += P_ij *(i-GLCM_MEAN) * (j-GLCM_MEAN);
-
-										// 16) Inverse Variance
-										if (i != j){
-											GLCM_IVAR += P_ij / Math.pow(i-j, 2);
-										}
-
-										// 17) Maximum Probability
-										if (GLCM_MAXP <= P_ij){
-											GLCM_MAXP = P_ij;
-										}
-									}
-								}
-								if(GLCM_VAR!=0)
+							}
+							if(GLCM_VAR!=0)
 								GLCM_CORR = GLCM_CORR / GLCM_VAR;
-								
-								// 18 ~ 20)  Sum Average (SUMA), Variance (SUMV), Entropy (SUME)
-								for (int i = 0; i < sum_i.length; i ++){
-									GLCM_SUMA += sum_i[i] * i;
-									if(sum_i[i] != 0){
-										GLCM_SUME -= sum_i[i] * Math.log(sum_i[i])/Math.log(2);
-									}
-								}
-								for (int i = 0; i < sum_i.length; i ++){
-									GLCM_SUMV += Math.pow(i-GLCM_SUMA, 2) * sum_i[i];
-								}
 
-								// 21 ~ 23)  Difference Average (DIFA), Variance (DIFV), Entropy (DIFE)
-								for (int i = 0; i < diff_i.length; i ++){
-									GLCM_DIFA += diff_i[i] * i;
-									if(diff_i[i] != 0){
-										GLCM_DIFE -= diff_i[i] * Math.log(diff_i[i])/Math.log(2);
-									}
+							// 18 ~ 20)  Sum Average (SUMA), Variance (SUMV), Entropy (SUME)
+							for (int i = 0; i < sum_i.length; i ++){
+								GLCM_SUMA += sum_i[i] * i;
+								if(sum_i[i] != 0){
+									GLCM_SUME -= sum_i[i] * Math.log(sum_i[i])/Math.log(2);
 								}
-								for (int i = 0; i < diff_i.length; i ++){
-									GLCM_DIFV += Math.pow(i-GLCM_DIFA, 2) * diff_i[i];
-								}
+							}
+							for (int i = 0; i < sum_i.length; i ++){
+								GLCM_SUMV += Math.pow(i-GLCM_SUMA, 2) * sum_i[i];
+							}
 
-								// looping for HXY matrix..
-								double HX = 0.0, HXY = 0.0, HXY1 = 0.0, HXY2 = 0.0; 
-								for (int i = 0; i < histogramBins; i ++){
-									if(Px[i]!=0){
-										HX -= Px[i] * Math.log(Px[i]);								
-									} 
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = P_ij = GLCM_mat[i][j];
-
-										if(P_ij != 0){
-											HXY -= P_ij * Math.log(P_ij);
-										}
-										if(Px[i]!=0 && Px[j] !=0){
-											HXY1 -= P_ij * Math.log(Px[i]*Px[j]);
-											HXY2 -= Px[i]*Px[j] * Math.log(Px[i]*Px[j]);
-										}				
-									}
+							// 21 ~ 23)  Difference Average (DIFA), Variance (DIFV), Entropy (DIFE)
+							for (int i = 0; i < diff_i.length; i ++){
+								GLCM_DIFA += diff_i[i] * i;
+								if(diff_i[i] != 0){
+									GLCM_DIFE -= diff_i[i] * Math.log(diff_i[i])/Math.log(2);
 								}
-								// 24) Informational measure of correlation 1 (IMC1)
-								if(HX!=0)
+							}
+							for (int i = 0; i < diff_i.length; i ++){
+								GLCM_DIFV += Math.pow(i-GLCM_DIFA, 2) * diff_i[i];
+							}
+
+							// looping for HXY matrix..
+							double HX = 0.0, HXY = 0.0, HXY1 = 0.0, HXY2 = 0.0; 
+							for (int i = 0; i < histogramBins; i ++){
+								if(Px[i]!=0){
+									HX -= Px[i] * Math.log(Px[i]);								
+								} 
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = P_ij = GLCM_mat[i][j];
+
+									if(P_ij != 0){
+										HXY -= P_ij * Math.log(P_ij);
+									}
+									if(Px[i]!=0 && Px[j] !=0){
+										HXY1 -= P_ij * Math.log(Px[i]*Px[j]);
+										HXY2 -= Px[i]*Px[j] * Math.log(Px[i]*Px[j]);
+									}				
+								}
+							}
+							// 24) Informational measure of correlation 1 (IMC1)
+							if(HX!=0)
 								GLCM_IMC1 = (HXY - HXY1) / HX;
 
-								// 25) Informational measure of correlation 1 (IMC1)
-								if(HXY2-HXY>0)
+							// 25) Informational measure of correlation 1 (IMC1)
+							if(HXY2-HXY>0)
 								GLCM_IMC2 = Math.sqrt(1-Math.exp(-2*(HXY2-HXY)));
 
-								if(texturemenu.create_value.getState()==true){
+							if(texturemenu.create_value.getState()==true){
+								if(texturemenu.direction_90.getState()==true){
 									GLCM_ASM_90 += GLCM_ASM; GLCM_CON_90 += GLCM_CON; GLCM_ENT_90 += GLCM_ENT; GLCM_MEAN_90 += GLCM_MEAN; GLCM_VAR_90 += GLCM_VAR;
 									GLCM_ACO_90+= GLCM_ACO; GLCM_CLP_90 += GLCM_CLP; GLCM_CLS_90 += GLCM_CLS; GLCM_CLT_90 += GLCM_CLT; GLCM_DIS_90 += GLCM_DIS;
 									GLCM_HOM_90 += GLCM_HOM; GLCM_IDM_90 += GLCM_IDM; GLCM_IDMN_90 += GLCM_IDMN; GLCM_IDN_90 += GLCM_IDN;
@@ -941,183 +1525,267 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 									GLCM_SUMA_90 += GLCM_SUMA; GLCM_SUMV_90 += GLCM_SUMV; GLCM_SUME_90 += GLCM_SUME;
 									GLCM_DIFA_90 += GLCM_DIFA; GLCM_DIFV_90 += GLCM_DIFV; GLCM_DIFE_90 += GLCM_DIFE;						
 									GLCM_IMC1_90 += GLCM_IMC1; GLCM_IMC2_90 += GLCM_IMC2;
-									if(texturemenu.direction_average.getState()==true){
-										GLCM_ASM_ave += GLCM_ASM; GLCM_CON_ave += GLCM_CON; GLCM_ENT_ave += GLCM_ENT; GLCM_MEAN_ave += GLCM_MEAN; GLCM_VAR_ave += GLCM_VAR;
-										GLCM_ACO_ave+= GLCM_ACO; GLCM_CLP_ave += GLCM_CLP; GLCM_CLS_ave += GLCM_CLS; GLCM_CLT_ave += GLCM_CLT; GLCM_DIS_ave += GLCM_DIS;
-										GLCM_HOM_ave += GLCM_HOM; GLCM_IDM_ave += GLCM_IDM; GLCM_IDMN_ave += GLCM_IDMN; GLCM_IDN_ave += GLCM_IDN;
-										GLCM_CORR_ave += GLCM_CORR; GLCM_IVAR_ave += GLCM_IVAR; GLCM_MAXP_ave += GLCM_MAXP;						
-										GLCM_SUMA_ave += GLCM_SUMA; GLCM_SUMV_ave += GLCM_SUMV; GLCM_SUME_ave += GLCM_SUME;
-										GLCM_DIFA_ave += GLCM_DIFA; GLCM_DIFV_ave += GLCM_DIFV; GLCM_DIFE_ave += GLCM_DIFE;						
-										GLCM_IMC1_ave += GLCM_IMC1; GLCM_IMC2_ave += GLCM_IMC2;
-									}
+								}
+								if(texturemenu.direction_average.getState()==true){
+									GLCM_ASM_ave += GLCM_ASM; GLCM_CON_ave += GLCM_CON; GLCM_ENT_ave += GLCM_ENT; GLCM_MEAN_ave += GLCM_MEAN; GLCM_VAR_ave += GLCM_VAR;
+									GLCM_ACO_ave+= GLCM_ACO; GLCM_CLP_ave += GLCM_CLP; GLCM_CLS_ave += GLCM_CLS; GLCM_CLT_ave += GLCM_CLT; GLCM_DIS_ave += GLCM_DIS;
+									GLCM_HOM_ave += GLCM_HOM; GLCM_IDM_ave += GLCM_IDM; GLCM_IDMN_ave += GLCM_IDMN; GLCM_IDN_ave += GLCM_IDN;
+									GLCM_CORR_ave += GLCM_CORR; GLCM_IVAR_ave += GLCM_IVAR; GLCM_MAXP_ave += GLCM_MAXP;						
+									GLCM_SUMA_ave += GLCM_SUMA; GLCM_SUMV_ave += GLCM_SUMV; GLCM_SUME_ave += GLCM_SUME;
+									GLCM_DIFA_ave += GLCM_DIFA; GLCM_DIFV_ave += GLCM_DIFV; GLCM_DIFE_ave += GLCM_DIFE;						
+									GLCM_IMC1_ave += GLCM_IMC1; GLCM_IMC2_ave += GLCM_IMC2;
+									GLCM_ASM_ave_pixel += GLCM_ASM; GLCM_CON_ave_pixel += GLCM_CON; GLCM_ENT_ave_pixel += GLCM_ENT; GLCM_MEAN_ave_pixel += GLCM_MEAN; GLCM_VAR_ave_pixel += GLCM_VAR;
+									GLCM_ACO_ave_pixel+= GLCM_ACO; GLCM_CLP_ave_pixel += GLCM_CLP; GLCM_CLS_ave_pixel += GLCM_CLS; GLCM_CLT_ave_pixel += GLCM_CLT; GLCM_DIS_ave_pixel += GLCM_DIS;
+									GLCM_HOM_ave_pixel += GLCM_HOM; GLCM_IDM_ave_pixel += GLCM_IDM; GLCM_IDMN_ave_pixel += GLCM_IDMN; GLCM_IDN_ave_pixel += GLCM_IDN;
+									GLCM_CORR_ave_pixel += GLCM_CORR; GLCM_IVAR_ave_pixel += GLCM_IVAR; GLCM_MAXP_ave_pixel += GLCM_MAXP;						
+									GLCM_SUMA_ave_pixel += GLCM_SUMA; GLCM_SUMV_ave_pixel += GLCM_SUMV; GLCM_SUME_ave_pixel += GLCM_SUME;
+									GLCM_DIFA_ave_pixel += GLCM_DIFA; GLCM_DIFV_ave_pixel += GLCM_DIFV; GLCM_DIFE_ave_pixel += GLCM_DIFE;						
+									GLCM_IMC1_ave_pixel += GLCM_IMC1; GLCM_IMC2_ave_pixel += GLCM_IMC2;
+								}
+							}
+							
+							if(texturemenu.create_map.getState()==true && texturemenu.direction_90.getState()==true){
+								if(texturemenu.glcm_ASM.getState()==true){
+									GLCM_ASM_90_Array[indexH*_W+indexW] = (float) GLCM_ASM; 
+								}
+								if(texturemenu.glcm_CON.getState()==true){
+									GLCM_CON_90_Array[indexH*_W+indexW] = (float) GLCM_CON; 
+								}
+								if(texturemenu.glcm_ENT.getState()==true){
+									GLCM_ENT_90_Array[indexH*_W+indexW] = (float) GLCM_ENT; 
+								}
+								if(texturemenu.glcm_MEAN.getState()==true){
+									GLCM_MEAN_90_Array[indexH*_W+indexW] = (float) GLCM_MEAN; 
+								}
+								if(texturemenu.glcm_VAR.getState()==true){
+									GLCM_VAR_90_Array[indexH*_W+indexW] = (float) GLCM_VAR; 
+								}
+								if(texturemenu.glcm_ACO.getState()==true){
+									GLCM_ACO_90_Array[indexH*_W+indexW] = (float) GLCM_ACO; 
+								}
+								if(texturemenu.glcm_CLP.getState()==true){
+									GLCM_CLP_90_Array[indexH*_W+indexW] = (float) GLCM_CLP; 
+								}
+								if(texturemenu.glcm_CLS.getState()==true){
+									GLCM_CLS_90_Array[indexH*_W+indexW] = (float) GLCM_CLS; 
+								}
+								if(texturemenu.glcm_CLT.getState()==true){
+									GLCM_CLT_90_Array[indexH*_W+indexW] = (float) GLCM_CLT; 
+								}
+								if(texturemenu.glcm_DIS.getState()==true){
+									GLCM_DIS_90_Array[indexH*_W+indexW] = (float) GLCM_DIS; 
+								}
+								if(texturemenu.glcm_HOM.getState()==true){
+									GLCM_HOM_90_Array[indexH*_W+indexW] = (float) GLCM_HOM; 
+								}
+								if(texturemenu.glcm_IDM.getState()==true){
+									GLCM_IDM_90_Array[indexH*_W+indexW] = (float) GLCM_IDM; 
+								}
+								if(texturemenu.glcm_IDMN.getState()==true){
+									GLCM_IDMN_90_Array[indexH*_W+indexW] = (float) GLCM_IDMN; 
+								}
+								if(texturemenu.glcm_IDN.getState()==true){
+									GLCM_IDN_90_Array[indexH*_W+indexW] = (float) GLCM_IDN; 
+								}
+								if(texturemenu.glcm_CORR.getState()==true){
+									GLCM_CORR_90_Array[indexH*_W+indexW] = (float) GLCM_CORR; 
+								}
+								if(texturemenu.glcm_IVAR.getState()==true){
+									GLCM_IVAR_90_Array[indexH*_W+indexW] = (float) GLCM_IVAR; 
+								}
+								if(texturemenu.glcm_MAXP.getState()==true){
+									GLCM_MAXP_90_Array[indexH*_W+indexW] = (float) GLCM_MAXP; 
+								}
+								if(texturemenu.glcm_SUMA.getState()==true){
+									GLCM_SUMA_90_Array[indexH*_W+indexW] = (float) GLCM_SUMA; 
+								}
+								if(texturemenu.glcm_SUMV.getState()==true){
+									GLCM_SUMV_90_Array[indexH*_W+indexW] = (float) GLCM_SUMV; 
+								}
+								if(texturemenu.glcm_SUME.getState()==true){
+									GLCM_SUME_90_Array[indexH*_W+indexW] = (float) GLCM_SUME; 
+								}
+								if(texturemenu.glcm_DIFV.getState()==true){
+									GLCM_DIFV_90_Array[indexH*_W+indexW] = (float) GLCM_DIFV; 
+								}
+								if(texturemenu.glcm_DIFE.getState()==true){
+									GLCM_DIFE_90_Array[indexH*_W+indexW] = (float) GLCM_DIFE; 
+								}
+								if(texturemenu.glcm_IMC1.getState()==true){
+									GLCM_IMC1_90_Array[indexH*_W+indexW] = (float) GLCM_IMC1; 
+								}
+								if(texturemenu.glcm_IMC2.getState()==true){
+									GLCM_IMC2_90_Array[indexH*_W+indexW] = (float) GLCM_IMC2; 
+								}
+							}
+						}
+
+						//135¡Æ
+						GLCM_mat = new double[histogramBins][histogramBins];
+						if(texturemenu.direction_135.getState()==true || texturemenu.direction_average.getState()==true){
+							int windowCount = 0;
+							for(int kernel_h=-limitSize+1;kernel_h<=limitSize;kernel_h++){
+								for(int kernel_w=-limitSize+1;kernel_w<=limitSize;kernel_w++){
+									windowCount++;
+									int referecePixel = (int)img2DArray[indexW+kernel_w][indexH+kernel_h];
+									int neighborPixel = (int)img2DArray[indexW+kernel_w-1][indexH+kernel_h-1];
+									GLCM_mat[referecePixel][neighborPixel] = GLCM_mat[referecePixel][neighborPixel]+1; 
+									GLCM_mat[neighborPixel][referecePixel] = GLCM_mat[neighborPixel][referecePixel]+1; //symetry mtx
+								}
+							}
+							for(int h=0;h<histogramBins;h++){ // normalization
+								for(int w=0;w<histogramBins;w++){
+									GLCM_mat[w][h] = GLCM_mat[w][h]/ ((windowSize-1)*(windowSize-1)*2);
 								}
 							}
 
-							//135¡Æ
-							GLCM_mat = new double[histogramBins][histogramBins];
-							if(texturemenu.direction_135.getState()==true || texturemenu.direction_average.getState()==true){
-								int windowCount = 0;
-								for(int kernel_h=-limitSize+1;kernel_h<=limitSize;kernel_h++){
-									for(int kernel_w=-limitSize+1;kernel_w<=limitSize;kernel_w++){
-										windowCount++;
-										int referecePixel = (int)img2DArray[indexW+kernel_w][indexH+kernel_h];
-										int neighborPixel = (int)img2DArray[indexW+kernel_w-1][indexH+kernel_h-1];
-										GLCM_mat[referecePixel][neighborPixel] = GLCM_mat[referecePixel][neighborPixel]+1; 
-										GLCM_mat[neighborPixel][referecePixel] = GLCM_mat[neighborPixel][referecePixel]+1; //symetry mtx
+							double P_ij = 0;
+							double GLCM_ASM = 0.0, GLCM_CON = 0.0, GLCM_ENT = 0.0, GLCM_MEAN = 0.0, GLCM_VAR = 0.0;
+							double GLCM_ACO = 0.0, GLCM_CLP = 0.0, GLCM_CLS = 0.0, GLCM_CLT = 0.0, GLCM_DIS = 0.0;
+							double GLCM_HOM = 0.0, GLCM_IDM = 0.0, GLCM_IDMN = 0.0, GLCM_IDN = 0.0;
+							double GLCM_CORR = 0.0, GLCM_IVAR = 0.0, GLCM_MAXP = 0.0;						
+							double GLCM_SUMA = 0.0, GLCM_SUMV = 0.0, GLCM_SUME = 0.0;
+							double GLCM_DIFA = 0.0, GLCM_DIFV = 0.0, GLCM_DIFE = 0.0;						
+							double GLCM_IMC1 = 0.0, GLCM_IMC2 = 0.0;
+
+							// 3) calculate marginal, diff, sum matrix
+							// 3-1) for marginal, GLCM is symetry mtx. Px is same with Py. Ux=Uy=U(GLCM_MEAN).						
+							double[] Px = new double[histogramBins];
+							Arrays.fill(Px, 0.0);
+							double[] diff_i = new double[histogramBins];
+							Arrays.fill(diff_i, 0.0);
+							double[] sum_i = new double[2*histogramBins-1];
+							Arrays.fill(sum_i, 0.0);
+							int diff, sum;
+							for (int i = 0; i < histogramBins; i ++){
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = GLCM_mat[i][j];
+									if(P_ij==0)continue;
+									diff = Math.abs(i-j);
+									sum = i+j;
+
+									diff_i[diff] +=P_ij;
+									sum_i[sum] +=P_ij;
+									Px[i] += P_ij;
+
+									GLCM_MEAN += i * P_ij;
+								}
+							}
+
+							for (int i = 0; i < histogramBins; i ++){
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = GLCM_mat[i][j];
+									if(P_ij==0)continue;
+									// 1) Angular secon moment or Energy
+									GLCM_ASM += Math.pow(P_ij, 2);
+
+									// 2) Contrast
+									GLCM_CON += P_ij * Math.pow(i-j, 2);
+
+									// 3) Entropy 
+									if (P_ij != 0){
+										GLCM_ENT += P_ij * (-1 * Math.log(P_ij)/Math.log(2));
+									}
+
+									// 4) Mean is already calculated. 
+									// 5) Variance 
+									GLCM_VAR += P_ij * Math.pow(i - GLCM_MEAN, 2);
+
+									// 6) Autocorrelation1
+									GLCM_ACO += P_ij * i * j;
+
+									// 7) Cluster Prominence
+									GLCM_CLP += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 4); 
+
+									// 8) Cluster Shade
+									GLCM_CLS += P_ij * Math.pow(i + j - GLCM_MEAN -GLCM_MEAN, 3);
+
+									// 9) Cluster Tendency
+									GLCM_CLT += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 2);
+
+									// 10) Dissimilarity
+									GLCM_DIS += P_ij * Math.abs(i-j);
+
+									// 11) Homogeneity 1
+									GLCM_HOM += P_ij / (1 + Math.abs(i-j));
+
+									// 12) Homogeneity 2 or Inverse difference moment(IDM)
+									GLCM_IDM += P_ij / (1 + Math.pow(i-j, 2));
+
+									// 13) Inverse difference moment normalized (IDMN)
+									GLCM_IDMN += P_ij / (1 + (Math.pow(i-j, 2) / Math.pow(histogramBins,2) ) );
+
+									// 14) Inverse difference normalized (IDN)
+									GLCM_IDN += P_ij / (1 + (Math.pow(i-j, 2) / ((double)histogramBins) ) );
+
+									// 15 Correlation
+									GLCM_CORR += P_ij *(i-GLCM_MEAN) * (j-GLCM_MEAN);
+
+									// 16) Inverse Variance
+									if (i != j){
+										GLCM_IVAR += P_ij / Math.pow(i-j, 2);
+									}
+
+									// 17) Maximum Probability
+									if (GLCM_MAXP <= P_ij){
+										GLCM_MAXP = P_ij;
 									}
 								}
-								for(int h=0;h<histogramBins;h++){ // normalization
-									for(int w=0;w<histogramBins;w++){
-										GLCM_mat[w][h] = GLCM_mat[w][h]/ ((windowSize-1)*(windowSize-1)*2);
-									}
-								}
-
-								double P_ij = 0;
-								double GLCM_ASM = 0.0, GLCM_CON = 0.0, GLCM_ENT = 0.0, GLCM_MEAN = 0.0, GLCM_VAR = 0.0;
-								double GLCM_ACO = 0.0, GLCM_CLP = 0.0, GLCM_CLS = 0.0, GLCM_CLT = 0.0, GLCM_DIS = 0.0;
-								double GLCM_HOM = 0.0, GLCM_IDM = 0.0, GLCM_IDMN = 0.0, GLCM_IDN = 0.0;
-								double GLCM_CORR = 0.0, GLCM_IVAR = 0.0, GLCM_MAXP = 0.0;						
-								double GLCM_SUMA = 0.0, GLCM_SUMV = 0.0, GLCM_SUME = 0.0;
-								double GLCM_DIFA = 0.0, GLCM_DIFV = 0.0, GLCM_DIFE = 0.0;						
-								double GLCM_IMC1 = 0.0, GLCM_IMC2 = 0.0;
-
-								// 3) calculate marginal, diff, sum matrix
-								// 3-1) for marginal, GLCM is symetry mtx. Px is same with Py. Ux=Uy=U(GLCM_MEAN).						
-								double[] Px = new double[histogramBins];
-								Arrays.fill(Px, 0.0);
-								double[] diff_i = new double[histogramBins];
-								Arrays.fill(diff_i, 0.0);
-								double[] sum_i = new double[2*histogramBins-1];
-								Arrays.fill(sum_i, 0.0);
-								int diff, sum;
-								for (int i = 0; i < histogramBins; i ++){
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = GLCM_mat[i][j];
-										if(P_ij==0)continue;
-										diff = Math.abs(i-j);
-										sum = i+j;
-
-										diff_i[diff] +=P_ij;
-										sum_i[sum] +=P_ij;
-										Px[i] += P_ij;
-
-										GLCM_MEAN += i * P_ij;
-									}
-								}
-
-								for (int i = 0; i < histogramBins; i ++){
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = GLCM_mat[i][j];
-										if(P_ij==0)continue;
-										// 1) Angular secon moment or Energy
-										GLCM_ASM += Math.pow(P_ij, 2);
-
-										// 2) Contrast
-										GLCM_CON += P_ij * Math.pow(i-j, 2);
-
-										// 3) Entropy 
-										if (P_ij != 0){
-											GLCM_ENT += P_ij * (-1 * Math.log(P_ij)/Math.log(2));
-										}
-
-										// 4) Mean is already calculated. 
-										// 5) Variance 
-										GLCM_VAR += P_ij * Math.pow(i - GLCM_MEAN, 2);
-
-										// 6) Autocorrelation1
-										GLCM_ACO += P_ij * i * j;
-
-										// 7) Cluster Prominence
-										GLCM_CLP += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 4); 
-
-										// 8) Cluster Shade
-										GLCM_CLS += P_ij * Math.pow(i + j - GLCM_MEAN -GLCM_MEAN, 3);
-
-										// 9) Cluster Tendency
-										GLCM_CLT += P_ij * Math.pow(i + j - GLCM_MEAN - GLCM_MEAN, 2);
-
-										// 10) Dissimilarity
-										GLCM_DIS += P_ij * Math.abs(i-j);
-
-										// 11) Homogeneity 1
-										GLCM_HOM += P_ij / (1 + Math.abs(i-j));
-
-										// 12) Homogeneity 2 or Inverse difference moment(IDM)
-										GLCM_IDM += P_ij / (1 + Math.pow(i-j, 2));
-
-										// 13) Inverse difference moment normalized (IDMN)
-										GLCM_IDMN += P_ij / (1 + (Math.pow(i-j, 2) / Math.pow(histogramBins,2) ) );
-
-										// 14) Inverse difference normalized (IDN)
-										GLCM_IDN += P_ij / (1 + (Math.pow(i-j, 2) / ((double)histogramBins) ) );
-
-										// 15 Correlation
-										GLCM_CORR += P_ij *(i-GLCM_MEAN) * (j-GLCM_MEAN);
-
-										// 16) Inverse Variance
-										if (i != j){
-											GLCM_IVAR += P_ij / Math.pow(i-j, 2);
-										}
-
-										// 17) Maximum Probability
-										if (GLCM_MAXP <= P_ij){
-											GLCM_MAXP = P_ij;
-										}
-									}
-								}
-								if(GLCM_VAR!=0)
+							}
+							if(GLCM_VAR!=0)
 								GLCM_CORR = GLCM_CORR / GLCM_VAR;
-								
-								// 18 ~ 20)  Sum Average (SUMA), Variance (SUMV), Entropy (SUME)
-								for (int i = 0; i < sum_i.length; i ++){
-									GLCM_SUMA += sum_i[i] * i;
-									if(sum_i[i] != 0){
-										GLCM_SUME -= sum_i[i] * Math.log(sum_i[i])/Math.log(2);
-									}
-								}
-								for (int i = 0; i < sum_i.length; i ++){
-									GLCM_SUMV += Math.pow(i-GLCM_SUMA, 2) * sum_i[i];
-								}
 
-								// 21 ~ 23)  Difference Average (DIFA), Variance (DIFV), Entropy (DIFE)
-								for (int i = 0; i < diff_i.length; i ++){
-									GLCM_DIFA += diff_i[i] * i;
-									if(diff_i[i] != 0){
-										GLCM_DIFE -= diff_i[i] * Math.log(diff_i[i])/Math.log(2);
-									}
+							// 18 ~ 20)  Sum Average (SUMA), Variance (SUMV), Entropy (SUME)
+							for (int i = 0; i < sum_i.length; i ++){
+								GLCM_SUMA += sum_i[i] * i;
+								if(sum_i[i] != 0){
+									GLCM_SUME -= sum_i[i] * Math.log(sum_i[i])/Math.log(2);
 								}
-								for (int i = 0; i < diff_i.length; i ++){
-									GLCM_DIFV += Math.pow(i-GLCM_DIFA, 2) * diff_i[i];
-								}
+							}
+							for (int i = 0; i < sum_i.length; i ++){
+								GLCM_SUMV += Math.pow(i-GLCM_SUMA, 2) * sum_i[i];
+							}
 
-								// looping for HXY matrix..
-								double HX = 0.0, HXY = 0.0, HXY1 = 0.0, HXY2 = 0.0; 
-								for (int i = 0; i < histogramBins; i ++){
-									if(Px[i]!=0){
-										HX -= Px[i] * Math.log(Px[i]);								
-									} 
-									for (int j = 0; j < histogramBins; j++){
-										P_ij = P_ij = GLCM_mat[i][j];
-
-										if(P_ij != 0){
-											HXY -= P_ij * Math.log(P_ij);
-										}
-										if(Px[i]!=0 && Px[j] !=0){
-											HXY1 -= P_ij * Math.log(Px[i]*Px[j]);
-											HXY2 -= Px[i]*Px[j] * Math.log(Px[i]*Px[j]);
-										}				
-									}
+							// 21 ~ 23)  Difference Average (DIFA), Variance (DIFV), Entropy (DIFE)
+							for (int i = 0; i < diff_i.length; i ++){
+								GLCM_DIFA += diff_i[i] * i;
+								if(diff_i[i] != 0){
+									GLCM_DIFE -= diff_i[i] * Math.log(diff_i[i])/Math.log(2);
 								}
-								
-								// 24) Informational measure of correlation 1 (IMC1)
-								if(HX!=0)
+							}
+							for (int i = 0; i < diff_i.length; i ++){
+								GLCM_DIFV += Math.pow(i-GLCM_DIFA, 2) * diff_i[i];
+							}
+
+							// looping for HXY matrix..
+							double HX = 0.0, HXY = 0.0, HXY1 = 0.0, HXY2 = 0.0; 
+							for (int i = 0; i < histogramBins; i ++){
+								if(Px[i]!=0){
+									HX -= Px[i] * Math.log(Px[i]);								
+								} 
+								for (int j = 0; j < histogramBins; j++){
+									P_ij = P_ij = GLCM_mat[i][j];
+
+									if(P_ij != 0){
+										HXY -= P_ij * Math.log(P_ij);
+									}
+									if(Px[i]!=0 && Px[j] !=0){
+										HXY1 -= P_ij * Math.log(Px[i]*Px[j]);
+										HXY2 -= Px[i]*Px[j] * Math.log(Px[i]*Px[j]);
+									}				
+								}
+							}
+
+							// 24) Informational measure of correlation 1 (IMC1)
+							if(HX!=0)
 								GLCM_IMC1 = (HXY - HXY1) / HX;
 
-								// 25) Informational measure of correlation 1 (IMC1)
-								if(HXY2-HXY>0)
+							// 25) Informational measure of correlation 1 (IMC1)
+							if(HXY2-HXY>0)
 								GLCM_IMC2 = Math.sqrt(1-Math.exp(-2*(HXY2-HXY)));                                  
 
-								if(texturemenu.create_value.getState()==true){
+							if(texturemenu.create_value.getState()==true){
+								if(texturemenu.direction_135.getState()==true){
 									GLCM_ASM_135 += GLCM_ASM; GLCM_CON_135 += GLCM_CON; GLCM_ENT_135 += GLCM_ENT; GLCM_MEAN_135 += GLCM_MEAN; GLCM_VAR_135 += GLCM_VAR;
 									GLCM_ACO_135+= GLCM_ACO; GLCM_CLP_135 += GLCM_CLP; GLCM_CLS_135 += GLCM_CLS; GLCM_CLT_135 += GLCM_CLT; GLCM_DIS_135 += GLCM_DIS;
 									GLCM_HOM_135 += GLCM_HOM; GLCM_IDM_135 += GLCM_IDM; GLCM_IDMN_135 += GLCM_IDMN; GLCM_IDN_135 += GLCM_IDN;
@@ -1125,25 +1793,183 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 									GLCM_SUMA_135 += GLCM_SUMA; GLCM_SUMV_135 += GLCM_SUMV; GLCM_SUME_135 += GLCM_SUME;
 									GLCM_DIFA_135 += GLCM_DIFA; GLCM_DIFV_135 += GLCM_DIFV; GLCM_DIFE_135 += GLCM_DIFE;						
 									GLCM_IMC1_135 += GLCM_IMC1; GLCM_IMC2_135 += GLCM_IMC2;
-									if(texturemenu.direction_average.getState()==true){
-										GLCM_ASM_ave += GLCM_ASM; GLCM_CON_ave += GLCM_CON; GLCM_ENT_ave += GLCM_ENT; GLCM_MEAN_ave += GLCM_MEAN; GLCM_VAR_ave += GLCM_VAR;
-										GLCM_ACO_ave+= GLCM_ACO; GLCM_CLP_ave += GLCM_CLP; GLCM_CLS_ave += GLCM_CLS; GLCM_CLT_ave += GLCM_CLT; GLCM_DIS_ave += GLCM_DIS;
-										GLCM_HOM_ave += GLCM_HOM; GLCM_IDM_ave += GLCM_IDM; GLCM_IDMN_ave += GLCM_IDMN; GLCM_IDN_ave += GLCM_IDN;
-										GLCM_CORR_ave += GLCM_CORR; GLCM_IVAR_ave += GLCM_IVAR; GLCM_MAXP_ave += GLCM_MAXP;						
-										GLCM_SUMA_ave += GLCM_SUMA; GLCM_SUMV_ave += GLCM_SUMV; GLCM_SUME_ave += GLCM_SUME;
-										GLCM_DIFA_ave += GLCM_DIFA; GLCM_DIFV_ave += GLCM_DIFV; GLCM_DIFE_ave += GLCM_DIFE;						
-										GLCM_IMC1_ave += GLCM_IMC1; GLCM_IMC2_ave += GLCM_IMC2;
-									}
+								}
+								if(texturemenu.direction_average.getState()==true){
+									GLCM_ASM_ave += GLCM_ASM; GLCM_CON_ave += GLCM_CON; GLCM_ENT_ave += GLCM_ENT; GLCM_MEAN_ave += GLCM_MEAN; GLCM_VAR_ave += GLCM_VAR;
+									GLCM_ACO_ave+= GLCM_ACO; GLCM_CLP_ave += GLCM_CLP; GLCM_CLS_ave += GLCM_CLS; GLCM_CLT_ave += GLCM_CLT; GLCM_DIS_ave += GLCM_DIS;
+									GLCM_HOM_ave += GLCM_HOM; GLCM_IDM_ave += GLCM_IDM; GLCM_IDMN_ave += GLCM_IDMN; GLCM_IDN_ave += GLCM_IDN;
+									GLCM_CORR_ave += GLCM_CORR; GLCM_IVAR_ave += GLCM_IVAR; GLCM_MAXP_ave += GLCM_MAXP;						
+									GLCM_SUMA_ave += GLCM_SUMA; GLCM_SUMV_ave += GLCM_SUMV; GLCM_SUME_ave += GLCM_SUME;
+									GLCM_DIFA_ave += GLCM_DIFA; GLCM_DIFV_ave += GLCM_DIFV; GLCM_DIFE_ave += GLCM_DIFE;						
+									GLCM_IMC1_ave += GLCM_IMC1; GLCM_IMC2_ave += GLCM_IMC2;
+									GLCM_ASM_ave_pixel += GLCM_ASM; GLCM_CON_ave_pixel += GLCM_CON; GLCM_ENT_ave_pixel += GLCM_ENT; GLCM_MEAN_ave_pixel += GLCM_MEAN; GLCM_VAR_ave_pixel += GLCM_VAR;
+									GLCM_ACO_ave_pixel+= GLCM_ACO; GLCM_CLP_ave_pixel += GLCM_CLP; GLCM_CLS_ave_pixel += GLCM_CLS; GLCM_CLT_ave_pixel += GLCM_CLT; GLCM_DIS_ave_pixel += GLCM_DIS;
+									GLCM_HOM_ave_pixel += GLCM_HOM; GLCM_IDM_ave_pixel += GLCM_IDM; GLCM_IDMN_ave_pixel += GLCM_IDMN; GLCM_IDN_ave_pixel += GLCM_IDN;
+									GLCM_CORR_ave_pixel += GLCM_CORR; GLCM_IVAR_ave_pixel += GLCM_IVAR; GLCM_MAXP_ave_pixel += GLCM_MAXP;						
+									GLCM_SUMA_ave_pixel += GLCM_SUMA; GLCM_SUMV_ave_pixel += GLCM_SUMV; GLCM_SUME_ave_pixel += GLCM_SUME;
+									GLCM_DIFA_ave_pixel += GLCM_DIFA; GLCM_DIFV_ave_pixel += GLCM_DIFV; GLCM_DIFE_ave_pixel += GLCM_DIFE;						
+									GLCM_IMC1_ave_pixel += GLCM_IMC1; GLCM_IMC2_ave_pixel += GLCM_IMC2;
+								}
+							}
+							
+							if(texturemenu.create_map.getState()==true && texturemenu.direction_135.getState()==true){
+								if(texturemenu.glcm_ASM.getState()==true){
+									GLCM_ASM_135_Array[indexH*_W+indexW] = (float) GLCM_ASM; 
+								}
+								if(texturemenu.glcm_CON.getState()==true){
+									GLCM_CON_135_Array[indexH*_W+indexW] = (float) GLCM_CON; 
+								}
+								if(texturemenu.glcm_ENT.getState()==true){
+									GLCM_ENT_135_Array[indexH*_W+indexW] = (float) GLCM_ENT; 
+								}
+								if(texturemenu.glcm_MEAN.getState()==true){
+									GLCM_MEAN_135_Array[indexH*_W+indexW] = (float) GLCM_MEAN; 
+								}
+								if(texturemenu.glcm_VAR.getState()==true){
+									GLCM_VAR_135_Array[indexH*_W+indexW] = (float) GLCM_VAR; 
+								}
+								if(texturemenu.glcm_ACO.getState()==true){
+									GLCM_ACO_135_Array[indexH*_W+indexW] = (float) GLCM_ACO; 
+								}
+								if(texturemenu.glcm_CLP.getState()==true){
+									GLCM_CLP_135_Array[indexH*_W+indexW] = (float) GLCM_CLP; 
+								}
+								if(texturemenu.glcm_CLS.getState()==true){
+									GLCM_CLS_135_Array[indexH*_W+indexW] = (float) GLCM_CLS; 
+								}
+								if(texturemenu.glcm_CLT.getState()==true){
+									GLCM_CLT_135_Array[indexH*_W+indexW] = (float) GLCM_CLT; 
+								}
+								if(texturemenu.glcm_DIS.getState()==true){
+									GLCM_DIS_135_Array[indexH*_W+indexW] = (float) GLCM_DIS; 
+								}
+								if(texturemenu.glcm_HOM.getState()==true){
+									GLCM_HOM_135_Array[indexH*_W+indexW] = (float) GLCM_HOM; 
+								}
+								if(texturemenu.glcm_IDM.getState()==true){
+									GLCM_IDM_135_Array[indexH*_W+indexW] = (float) GLCM_IDM; 
+								}
+								if(texturemenu.glcm_IDMN.getState()==true){
+									GLCM_IDMN_135_Array[indexH*_W+indexW] = (float) GLCM_IDMN; 
+								}
+								if(texturemenu.glcm_IDN.getState()==true){
+									GLCM_IDN_135_Array[indexH*_W+indexW] = (float) GLCM_IDN; 
+								}
+								if(texturemenu.glcm_CORR.getState()==true){
+									GLCM_CORR_135_Array[indexH*_W+indexW] = (float) GLCM_CORR; 
+								}
+								if(texturemenu.glcm_IVAR.getState()==true){
+									GLCM_IVAR_135_Array[indexH*_W+indexW] = (float) GLCM_IVAR; 
+								}
+								if(texturemenu.glcm_MAXP.getState()==true){
+									GLCM_MAXP_135_Array[indexH*_W+indexW] = (float) GLCM_MAXP; 
+								}
+								if(texturemenu.glcm_SUMA.getState()==true){
+									GLCM_SUMA_135_Array[indexH*_W+indexW] = (float) GLCM_SUMA; 
+								}
+								if(texturemenu.glcm_SUMV.getState()==true){
+									GLCM_SUMV_135_Array[indexH*_W+indexW] = (float) GLCM_SUMV; 
+								}
+								if(texturemenu.glcm_SUME.getState()==true){
+									GLCM_SUME_135_Array[indexH*_W+indexW] = (float) GLCM_SUME; 
+								}
+								if(texturemenu.glcm_DIFV.getState()==true){
+									GLCM_DIFV_135_Array[indexH*_W+indexW] = (float) GLCM_DIFV; 
+								}
+								if(texturemenu.glcm_DIFE.getState()==true){
+									GLCM_DIFE_135_Array[indexH*_W+indexW] = (float) GLCM_DIFE; 
+								}
+								if(texturemenu.glcm_IMC1.getState()==true){
+									GLCM_IMC1_135_Array[indexH*_W+indexW] = (float) GLCM_IMC1; 
+								}
+								if(texturemenu.glcm_IMC2.getState()==true){
+									GLCM_IMC2_135_Array[indexH*_W+indexW] = (float) GLCM_IMC2; 
+								}
+							}
+							
+							if(texturemenu.create_map.getState()==true && texturemenu.direction_average.getState()==true){
+								if(texturemenu.glcm_ASM.getState()==true){
+									GLCM_ASM_ave_Array[indexH*_W+indexW] = (float) GLCM_ASM_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_CON.getState()==true){
+									GLCM_CON_ave_Array[indexH*_W+indexW] = (float) GLCM_CON_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_ENT.getState()==true){
+									GLCM_ENT_ave_Array[indexH*_W+indexW] = (float) GLCM_ENT_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_MEAN.getState()==true){
+									GLCM_MEAN_ave_Array[indexH*_W+indexW] = (float) GLCM_MEAN_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_VAR.getState()==true){
+									GLCM_VAR_ave_Array[indexH*_W+indexW] = (float) GLCM_VAR_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_ACO.getState()==true){
+									GLCM_ACO_ave_Array[indexH*_W+indexW] = (float) GLCM_ACO_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_CLP.getState()==true){
+									GLCM_CLP_ave_Array[indexH*_W+indexW] = (float) GLCM_CLP_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_CLS.getState()==true){
+									GLCM_CLS_ave_Array[indexH*_W+indexW] = (float) GLCM_CLS_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_CLT.getState()==true){
+									GLCM_CLT_ave_Array[indexH*_W+indexW] = (float) GLCM_CLT_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_DIS.getState()==true){
+									GLCM_DIS_ave_Array[indexH*_W+indexW] = (float) GLCM_DIS_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_HOM.getState()==true){
+									GLCM_HOM_ave_Array[indexH*_W+indexW] = (float) GLCM_HOM_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_IDM.getState()==true){
+									GLCM_IDM_ave_Array[indexH*_W+indexW] = (float) GLCM_IDM_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_IDMN.getState()==true){
+									GLCM_IDMN_ave_Array[indexH*_W+indexW] = (float) GLCM_IDMN_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_IDN.getState()==true){
+									GLCM_IDN_ave_Array[indexH*_W+indexW] = (float) GLCM_IDN_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_CORR.getState()==true){
+									GLCM_CORR_ave_Array[indexH*_W+indexW] = (float) GLCM_CORR_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_IVAR.getState()==true){
+									GLCM_IVAR_ave_Array[indexH*_W+indexW] = (float) GLCM_IVAR_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_MAXP.getState()==true){
+									GLCM_MAXP_ave_Array[indexH*_W+indexW] = (float) GLCM_MAXP_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_SUMA.getState()==true){
+									GLCM_SUMA_ave_Array[indexH*_W+indexW] = (float) GLCM_SUMA_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_SUMV.getState()==true){
+									GLCM_SUMV_ave_Array[indexH*_W+indexW] = (float) GLCM_SUMV_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_SUME.getState()==true){
+									GLCM_SUME_ave_Array[indexH*_W+indexW] = (float) GLCM_SUME_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_DIFV.getState()==true){
+									GLCM_DIFV_ave_Array[indexH*_W+indexW] = (float) GLCM_DIFV_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_DIFE.getState()==true){
+									GLCM_DIFE_ave_Array[indexH*_W+indexW] = (float) GLCM_DIFE_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_IMC1.getState()==true){
+									GLCM_IMC1_ave_Array[indexH*_W+indexW] = (float) GLCM_IMC1_ave_pixel/4; 
+								}
+								if(texturemenu.glcm_IMC2.getState()==true){
+									GLCM_IMC2_ave_Array[indexH*_W+indexW] = (float) GLCM_IMC2_ave_pixel/4; 
 								}
 							}
 						}
-						else{
-
-						}
+					}
+					else{
 
 					}
+
 				}
-//			}
+			}
+
 
 			if(texturemenu.create_value.getState()==true){
 				if(texture_Summary==null)texture_Summary = new ResultsTable();
@@ -1484,6 +2310,624 @@ public class GLCM_TextureAnalysis implements PlugIn , Measurements {
 				}
 
 				texture_Summary.show("Texture Analysis");
+			}
+			
+			if(texturemenu.create_map.getState()==true){
+				
+				if(texturemenu.direction_0.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("ASM_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_ASM_0_Array);
+						direction_0_map.show();
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("CON_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_CON_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("ENT_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_ENT_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("MEAN_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_MEAN_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("VAR_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_VAR_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("ACO_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_ACO_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("CLP_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_CLP_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("CLS_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_CLS_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("CLT_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_CLT_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("DIS_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_DIS_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("HOM_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_HOM_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("IDM_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_IDM_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("IDMN_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_IDMN_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("IDN_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_IDN_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("CORR_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_CORR_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("IVAR_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_IVAR_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("MAXP_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_MAXP_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("SUMA_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_SUMA_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("SUMV_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_SUMV_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("SUME_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_SUME_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("DIFV_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_DIFV_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("DIFE_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_DIFE_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("IMC1_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_IMC1_0_Array);
+						direction_0_map.show(); 
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						ImagePlus direction_0_map = NewImage.createImage("IMC2_0", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_0_map.getProcessor().setPixels(GLCM_IMC2_0_Array);
+						direction_0_map.show(); 
+					}
+				}
+				
+				if(texturemenu.direction_45.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("ASM_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_ASM_45_Array);
+						direction_45_map.show();
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("CON_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_CON_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("ENT_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_ENT_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("MEAN_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_MEAN_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("VAR_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_VAR_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("ACO_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_ACO_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("CLP_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_CLP_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("CLS_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_CLS_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("CLT_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_CLT_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("DIS_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_DIS_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("HOM_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_HOM_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("IDM_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_IDM_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("IDMN_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_IDMN_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("IDN_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_IDN_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("CORR_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_CORR_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("IVAR_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_IVAR_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("MAXP_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_MAXP_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("SUMA_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_SUMA_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("SUMV_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_SUMV_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("SUME_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_SUME_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("DIFV_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_DIFV_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("DIFE_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_DIFE_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("IMC1_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_IMC1_45_Array);
+						direction_45_map.show(); 
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						ImagePlus direction_45_map = NewImage.createImage("IMC2_45", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_45_map.getProcessor().setPixels(GLCM_IMC2_45_Array);
+						direction_45_map.show(); 
+					}
+				}
+				
+				if(texturemenu.direction_90.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("ASM_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_ASM_90_Array);
+						direction_90_map.show();
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("CON_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_CON_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("ENT_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_ENT_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("MEAN_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_MEAN_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("VAR_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_VAR_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("ACO_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_ACO_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("CLP_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_CLP_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("CLS_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_CLS_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("CLT_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_CLT_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("DIS_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_DIS_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("HOM_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_HOM_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("IDM_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_IDM_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("IDMN_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_IDMN_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("IDN_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_IDN_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("CORR_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_CORR_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("IVAR_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_IVAR_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("MAXP_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_MAXP_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("SUMA_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_SUMA_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("SUMV_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_SUMV_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("SUME_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_SUME_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("DIFV_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_DIFV_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("DIFE_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_DIFE_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("IMC1_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_IMC1_90_Array);
+						direction_90_map.show(); 
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						ImagePlus direction_90_map = NewImage.createImage("IMC2_90", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_90_map.getProcessor().setPixels(GLCM_IMC2_90_Array);
+						direction_90_map.show(); 
+					}
+				}
+				
+				if(texturemenu.direction_135.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("ASM_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_ASM_135_Array);
+						direction_135_map.show();
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						ImagePlus direction_135_map= NewImage.createImage("CON_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_CON_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("ENT_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_ENT_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("MEAN_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_MEAN_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("VAR_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_VAR_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("ACO_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_ACO_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("CLP_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_CLP_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("CLS_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_CLS_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("CLT_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_CLT_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("DIS_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_DIS_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("HOM_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_HOM_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("IDM_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_IDM_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("IDMN_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_IDMN_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("IDN_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_IDN_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("CORR_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_CORR_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("IVAR_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_IVAR_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("MAXP_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_MAXP_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("SUMA_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_SUMA_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("SUMV_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_SUMV_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("SUME_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_SUME_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("DIFV_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_DIFV_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("DIFE_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_DIFE_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("IMC1_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_IMC1_135_Array);
+						direction_135_map.show(); 
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						ImagePlus direction_135_map = NewImage.createImage("IMC2_135", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_135_map.getProcessor().setPixels(GLCM_IMC2_135_Array);
+						direction_135_map.show(); 
+					}
+				}
+				
+				if(texturemenu.direction_average.getState()==true){
+					if(texturemenu.glcm_ASM.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("ASM_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_ASM_ave_Array);
+						direction_ave_map.show();
+					}
+					if(texturemenu.glcm_CON.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("CON_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_CON_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_ENT.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("ENT_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_ENT_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_MEAN.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("MEAN_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_MEAN_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_VAR.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("VAR_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_VAR_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_ACO.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("ACO_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_ACO_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_CLP.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("CLP_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_CLP_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_CLS.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("CLS_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_CLS_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_CLT.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("CLT_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_CLT_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_DIS.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("DIS_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_DIS_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_HOM.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("HOM_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_HOM_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_IDM.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("IDM_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_IDM_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_IDMN.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("IDMN_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_IDMN_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_IDN.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("IDN_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_IDN_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_CORR.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("CORR_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_CORR_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_IVAR.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("IVAR_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_IVAR_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_MAXP.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("MAXP_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_MAXP_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_SUMA.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("SUMA_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_SUMA_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_SUMV.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("SUMV_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_SUMV_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_SUME.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("SUME_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_SUME_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_DIFV.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("DIFV_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_DIFV_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_DIFE.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("DIFE_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_DIFE_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_IMC1.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("IMC1_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_IMC1_ave_Array);
+						direction_ave_map.show(); 
+					}
+					if(texturemenu.glcm_IMC2.getState()==true){
+						ImagePlus direction_ave_map = NewImage.createImage("IMC2_ave", _W, _H, 1, 32, NewImage.FILL_BLACK);
+						direction_ave_map.getProcessor().setPixels(GLCM_IMC2_ave_Array);
+						direction_ave_map.show(); 
+					}
+				}
 			}
 		}
 

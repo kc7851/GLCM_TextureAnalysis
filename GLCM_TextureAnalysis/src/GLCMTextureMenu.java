@@ -151,24 +151,13 @@ public class GLCMTextureMenu extends JFrame implements WindowListener, Runnable 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		while (!done) {
-			xcoordi = imp.getWindow().getLocation().x;
-			ycoordi = imp.getWindow().getLocation().y + imp.getWindow().getHeight();
-			try {Thread.sleep(20);}
-			catch(InterruptedException e) {}
-			//					this.toFront();			
-			if (WindowManager.getWindow(imp.getTitle())==null){
-				shutDown();
-			}else{
-				//						frame.setLocation(imp.getWindow().getLocation().x,imp.getWindow().getLocation().y+imp.getWindow().getHeight());
-				this.setBounds(imp.getWindow().getLocation().x+imp.getWindow().getWidth(), imp.getWindow().getLocation().y, 268, 680);
-			}
-		}
+		this.setLocation(imp.getWindow().getLocation().x+imp.getWindow().getWidth(), imp.getWindow().getLocation().y);
+
 	}
 
 
 	/**
-	 * Initialize the contents of the frame.
+	 * Initialize the contents of the frame
 	 */
 	private void initialize() {
 		this.setBounds(100, 100, 268, 680);
@@ -922,12 +911,12 @@ public class GLCMTextureMenu extends JFrame implements WindowListener, Runnable 
 		getContentPane().add(separator_5);
 
 		roilonlycheck = new Checkbox("Selection only");
-		roilonlycheck.setEnabled(false);
+		roilonlycheck.setEnabled(true);
 		roilonlycheck.setBounds(10, 580, 101, 23);
 		this.getContentPane().add(roilonlycheck);
 		
 		create_map = new Checkbox("Map");
-		create_map.setEnabled(false);
+		create_map.setEnabled(true);
 		create_map.setBounds(130, 580, 52, 23);
 		getContentPane().add(create_map);
 		
